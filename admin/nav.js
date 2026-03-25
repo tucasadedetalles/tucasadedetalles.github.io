@@ -1,6 +1,5 @@
 // ============================================================
-//  Tu Casa de Detalles — admin/nav.js
-//  Genera la sidebar del panel admin dinámicamente
+//  Tu Casa de Detalles — admin/nav.js v2
 // ============================================================
 
 (function () {
@@ -34,9 +33,20 @@
           <span class="sidebar-logo-text">TCD</span>
           <button class="sidebar-close" id="btn-sidebar-close">✕</button>
         </div>
+
         <nav class="sidebar-nav">
           ${navItems}
         </nav>
+
+        <div class="sidebar-ver-tienda">
+          <a href="https://tucasadedetalles.github.io"
+             target="_blank"
+             class="btn-ver-tienda">
+            <span class="nav-icon">🌐</span>
+            <span class="nav-label">Ver tienda</span>
+          </a>
+        </div>
+
         <div class="sidebar-footer">
           <button class="btn-theme" id="btn-theme" title="Cambiar tema">
             <span id="theme-icon">☀</span>
@@ -47,10 +57,8 @@
     `;
   }
 
-  // Exponer función para que script.js pueda re-bindear eventos tras build
   window.AdminNav = { build: buildSidebar };
 
-  // Ejecutar al cargar
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', buildSidebar);
   } else {

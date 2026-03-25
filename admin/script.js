@@ -182,7 +182,7 @@ function navegarA(seccion) {
   const labels = {
     dashboard:'Dashboard', productos:'Productos', inventarios:'Inventarios',
     ventas:'Ventas', gastos:'Gastos', caja:'Caja diaria',
-    novedades:'Novedades', config:'Configuración'
+    novedades:'Novedades', calculadora:'Calculadora', config:'Configuración'
   };
   document.getElementById('topbar-title').textContent = labels[seccion] || seccion;
   document.getElementById('sidebar')?.classList.remove('open');
@@ -198,6 +198,7 @@ async function cargarSeccion(seccion) {
   if (seccion === 'caja')        await cargarCaja();
   if (seccion === 'novedades')   await cargarNovedades();
   if (seccion === 'config')      await cargarConfig();
+  if (seccion === 'calculadora') initCalculadora();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1233,6 +1234,116 @@ async function confirmarSubidaFotoNov(id) {
     btn.textContent = 'Subir';
     btn.disabled = false;
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CALCULADORA
+// ══════════════════════════════════════════════════════════════
+let calcState = { display: '0', expr: '', operand: null, operator: null, newNum: true };
+
+function initCalculadora() {
+  calcRender();
+}
+
+function calcRender() {
+  const disp = document.getElementById('calc-display');
+  const expr = document.getElementById('calc-expr');
+  if (disp) disp.textContent = calcState.display;
+  if (expr) expr.textContent = calcState.expr;
+}
+
+function calcInput(key) {
+  const s = calcState;
+
+  if (key === 'AC') {
+    calcState = { display: '0', expr: '', operand: null, operator: null, newNum: true };
+    calcRender(); return;
+  }
+
+  if (key === '+/-') {
+    s.display = String(parseFloat(s.display) * -1);
+    calcRender(); return;
+  }
+
+  if (key === '%') {
+    s.display = String(parseFloat(s.display) / 100);
+    calcRender(); return;
+  }
+
+  if (['÷', '×', '−', '+'].includes(key)) {
+    s.operand  = parseFloat(s.display);
+    s.operator = key;
+    s.expr     = s.display + ' ' + key;
+    s.newNum   = true;
+    calcRender(); return;
+  }
+
+  if (key === '=') {
+    if (s.operator === null) return;
+    const a = s.operand, b = parseFloat(s.display);
+    let result;
+    if (s.operator === '÷') result = b !== 0 ? a / b : 'Error';
+    if (s.operator === '×') result = a * b;
+    if (s.operator === '−') result = a - b;
+    if (s.operator === '+') result = a + b;
+    s.expr     = s.expr + ' ' + s.display + ' =';
+    s.display  = result === 'Error' ? 'Error' : String(parseFloat(result.toFixed(10)));
+    s.operand  = null;
+    s.operator = null;
+    s.newNum   = true;
+    calcRender(); return;
+  }
+
+  if (key === '.') {
+    if (s.newNum) { s.display = '0.'; s.newNum = false; calcRender(); return; }
+    if (!s.display.includes('.')) s.display += '.';
+    calcRender(); return;
+  }
+
+  // Número
+  if (s.newNum || s.display === '0') {
+    s.display = key;
+    s.newNum  = false;
+  } else {
+    if (s.display.replace('-','').replace('.','').length < 12)
+      s.display += key;
+  }
+  calcRender();
+}
+
+// Herramientas de negocio
+function calcMargen() {
+  const costo  = parseFloat(document.getElementById('mg-costo')?.value);
+  const margen = parseFloat(document.getElementById('mg-margen')?.value);
+  const el     = document.getElementById('mg-result');
+  if (!el) return;
+  if (isNaN(costo) || isNaN(margen)) { el.textContent = 'Ingresá costo y margen'; el.style.color = 'var(--coral)'; return; }
+  const venta  = costo * (1 + margen / 100);
+  el.style.color = 'var(--verde)';
+  el.textContent = `Precio de venta: $${venta.toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:2})} (ganancia: $${(venta-costo).toLocaleString('es-AR', {maximumFractionDigits:2})})`;
+}
+
+function calcDescuento() {
+  const precio = parseFloat(document.getElementById('dc-precio')?.value);
+  const desc   = parseFloat(document.getElementById('dc-desc')?.value);
+  const el     = document.getElementById('dc-result');
+  if (!el) return;
+  if (isNaN(precio) || isNaN(desc)) { el.textContent = 'Ingresá precio y descuento'; el.style.color = 'var(--coral)'; return; }
+  const final  = precio * (1 - desc / 100);
+  el.style.color = 'var(--verde)';
+  el.textContent = `Precio final: $${final.toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:2})} (ahorro: $${(precio-final).toLocaleString('es-AR', {maximumFractionDigits:2})})`;
+}
+
+function calcGanancia() {
+  const venta = parseFloat(document.getElementById('gn-venta')?.value);
+  const costo = parseFloat(document.getElementById('gn-costo')?.value);
+  const el    = document.getElementById('gn-result');
+  if (!el) return;
+  if (isNaN(venta) || isNaN(costo)) { el.textContent = 'Ingresá venta y costo'; el.style.color = 'var(--coral)'; return; }
+  const gan   = venta - costo;
+  const pct   = venta > 0 ? (gan / venta * 100) : 0;
+  el.style.color = gan >= 0 ? 'var(--verde)' : 'var(--coral)';
+  el.textContent = `Ganancia: $${gan.toLocaleString('es-AR', {maximumFractionDigits:2})} (${pct.toFixed(1)}% sobre venta)`;
 }
 
 // ══════════════════════════════════════════════════════════════

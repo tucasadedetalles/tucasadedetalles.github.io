@@ -1,38 +1,30 @@
 // ============================================================
-//  Tu Casa de Detalles — admin/script.js
+//  Tu Casa de Detalles — admin/script.js v2
 // ============================================================
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzqUSx96if9nNAyoVWeyKP7hvzVexv8e-I7W8l4ud30qfJXRf6qYF7p8xhTKxy6mMo/exec';
 
 const CATEGORIAS = [
-  'Accesorios Pelo',
-  'Accesorios Invierno',
-  'Morrales',
-  'Libreria',
-  'Llaveros',
-  'Cuidado Personal',
-  'Otros'
+  'Accesorios Pelo','Accesorios Invierno','Morrales',
+  'Libreria','Llaveros','Cuidado Personal','Otros'
 ];
 
 const PREFIJOS = {
-  'Accesorios Pelo':     'ACP',
-  'Accesorios Invierno': 'ACI',
-  'Morrales':            'MOR',
-  'Libreria':            'LIB',
-  'Llaveros':            'LLA',
-  'Cuidado Personal':    'CUI',
-  'Otros':               'OTR'
+  'Accesorios Pelo':'ACP','Accesorios Invierno':'ACI','Morrales':'MOR',
+  'Libreria':'LIB','Llaveros':'LLA','Cuidado Personal':'CUI','Otros':'OTR'
 };
 
 // ── Estado global ────────────────────────────────────────────
-let token       = localStorage.getItem('tcd_token') || '';
-let seccionActual = 'dashboard';
-let productosCache  = [];
-let ventasCache     = [];
-let gastosCache     = [];
+let token            = localStorage.getItem('tcd_token') || '';
+let seccionActual    = 'dashboard';
+let productosCache   = [];
+let ventasCache      = [];
+let gastosCache      = [];
 let inventariosCache = [];
 
-// ── Tema ─────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  TEMA
+// ══════════════════════════════════════════════════════════════
 function initTema() {
   const guardado = localStorage.getItem('tcd_tema') || 'dark';
   setTema(guardado);
@@ -51,7 +43,9 @@ function toggleTema() {
   setTema(actual === 'dark' ? 'light' : 'dark');
 }
 
-// ── API ──────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  API
+// ══════════════════════════════════════════════════════════════
 async function apiGet(params) {
   const url = GAS_URL + '?' + new URLSearchParams(params).toString();
   const res = await fetch(url);
@@ -66,7 +60,9 @@ async function apiPost(data) {
   return res.json();
 }
 
-// ── Toast ────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  UI HELPERS
+// ══════════════════════════════════════════════════════════════
 function toast(msg, tipo = 'success') {
   const el = document.getElementById('toast');
   el.textContent = msg;
@@ -76,7 +72,6 @@ function toast(msg, tipo = 'success') {
   el._t = setTimeout(() => el.classList.add('hidden'), 3000);
 }
 
-// ── Modal ────────────────────────────────────────────────────
 function abrirModal(titulo, bodyHTML, footerHTML) {
   document.getElementById('modal-title').textContent = titulo;
   document.getElementById('modal-body').innerHTML = bodyHTML;
@@ -90,7 +85,23 @@ function cerrarModal() {
   document.getElementById('modal-footer').innerHTML = '';
 }
 
-// ── Formato ──────────────────────────────────────────────────
+function setLoading(seccion, loading) {
+  const sec = document.getElementById('sec-' + seccion);
+  if (!sec) return;
+  let overlay = sec.querySelector('.loading-overlay');
+  if (loading) {
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'loading-overlay';
+      overlay.innerHTML = '<div class="loading-spinner"></div>';
+      sec.style.position = 'relative';
+      sec.appendChild(overlay);
+    }
+  } else {
+    if (overlay) overlay.remove();
+  }
+}
+
 function formatPeso(n) {
   return '$' + Number(n || 0).toLocaleString('es-AR');
 }
@@ -99,17 +110,16 @@ function fechaHoy() {
   return new Date().toISOString().split('T')[0];
 }
 
-function fechaCorta(f) {
-  if (!f) return '';
-  const d = new Date(f);
-  return d.toLocaleDateString('es-AR');
+function horaAhora() {
+  return new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 }
 
-// ── Compresión de imagen a JPG ────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  IMAGEN — compresión a JPG
+// ══════════════════════════════════════════════════════════════
 function comprimirImagen(file, maxPx = 1200, calidad = 0.82) {
   return new Promise((resolve, reject) => {
     if (!file.type.startsWith('image/')) {
-      // No es imagen — leer como base64 sin comprimir (PDF, etc.)
       const reader = new FileReader();
       reader.onload = e => resolve(e.target.result);
       reader.onerror = reject;
@@ -135,7 +145,9 @@ function comprimirImagen(file, maxPx = 1200, calidad = 0.82) {
   });
 }
 
-// ── Nav: eventos tras build ───────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  NAV
+// ══════════════════════════════════════════════════════════════
 function bindNav() {
   document.querySelectorAll('.nav-item[data-section]').forEach(el => {
     el.addEventListener('click', () => navegarA(el.dataset.section));
@@ -152,10 +164,9 @@ function bindNav() {
   if (btnTheme)  btnTheme.addEventListener('click', toggleTema);
   if (btnLogout) btnLogout.addEventListener('click', logout);
   if (btnClose)  btnClose.addEventListener('click', () => {
-    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar')?.classList.remove('open');
   });
 
-  // Sincronizar ícono de tema
   const tema = localStorage.getItem('tcd_tema') || 'dark';
   const icon = document.getElementById('theme-icon');
   if (icon) icon.textContent = tema === 'dark' ? '☀' : '☾';
@@ -163,29 +174,18 @@ function bindNav() {
 
 function navegarA(seccion) {
   seccionActual = seccion;
-
-  // Secciones
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  const sec = document.getElementById('sec-' + seccion);
-  if (sec) sec.classList.add('active');
-
-  // Nav activo
+  document.getElementById('sec-' + seccion)?.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => {
     n.classList.toggle('active', n.dataset.section === seccion);
   });
-
-  // Título topbar
   const labels = {
-    dashboard: 'Dashboard', productos: 'Productos', inventarios: 'Inventarios',
-    ventas: 'Ventas', gastos: 'Gastos', caja: 'Caja diaria',
-    novedades: 'Novedades', config: 'Configuración'
+    dashboard:'Dashboard', productos:'Productos', inventarios:'Inventarios',
+    ventas:'Ventas', gastos:'Gastos', caja:'Caja diaria',
+    novedades:'Novedades', config:'Configuración'
   };
   document.getElementById('topbar-title').textContent = labels[seccion] || seccion;
-
-  // Cerrar sidebar mobile
   document.getElementById('sidebar')?.classList.remove('open');
-
-  // Cargar datos de la sección
   cargarSeccion(seccion);
 }
 
@@ -200,18 +200,16 @@ async function cargarSeccion(seccion) {
   if (seccion === 'config')      await cargarConfig();
 }
 
-// ── LOGIN ────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  LOGIN
+// ══════════════════════════════════════════════════════════════
 async function login() {
-  const u = document.getElementById('login-user').value.trim();
-  const p = document.getElementById('login-pass').value.trim();
-  const errEl = document.getElementById('login-error');
-  const btn   = document.getElementById('btn-login');
-
+  const u   = document.getElementById('login-user').value.trim();
+  const p   = document.getElementById('login-pass').value.trim();
+  const btn = document.getElementById('btn-login');
   if (!u || !p) { mostrarLoginError('Completá usuario y contraseña'); return; }
-
   btn.textContent = 'Ingresando...';
   btn.disabled = true;
-
   try {
     const res = await apiGet({ action: 'login', u, p });
     if (res.ok && res.rol === 'admin') {
@@ -253,8 +251,11 @@ function logout() {
   document.getElementById('login-pass').value = '';
 }
 
-// ── DASHBOARD ─────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════════════════════
 async function cargarDashboard() {
+  setLoading('dashboard', true);
   try {
     const [rProd, rVentas, rGastos] = await Promise.all([
       apiGet({ action: 'getAll', hoja: 'productos', token }),
@@ -268,14 +269,13 @@ async function cargarDashboard() {
     const hoy       = fechaHoy();
     const mesActual = hoy.substring(0, 7);
 
-    // Stats
-    const ventasHoy  = ventas.filter(v => v.fecha === hoy);
-    const totalHoy   = ventasHoy.reduce((s, v) => s + Number(v.total || 0), 0);
-    const gastosMes  = gastos
+    const ventasHoy = ventas.filter(v => v.fecha === hoy);
+    const totalHoy  = ventasHoy.reduce((s, v) => s + Number(v.total || 0), 0);
+    const gastosMes = gastos
       .filter(g => String(g.fecha || '').startsWith(mesActual))
       .reduce((s, g) => s + Number(g.monto || 0), 0);
-    const stockMin   = Number(localStorage.getItem('tcd_stock_min') || 3);
-    const stockBajo  = productos.filter(p => Number(p.stock || 0) <= stockMin);
+    const stockMin  = Number(localStorage.getItem('tcd_stock_min') || 3);
+    const stockBajo = productos.filter(p => Number(p.stock || 0) <= Number(stockMin));
 
     document.getElementById('stat-ventas-hoy').textContent  = formatPeso(totalHoy);
     document.getElementById('stat-ventas-cant').textContent = ventasHoy.length + ' transacciones';
@@ -283,56 +283,54 @@ async function cargarDashboard() {
     document.getElementById('stat-saldo').textContent       = formatPeso(totalHoy - gastosMes);
     document.getElementById('stat-stock-bajo').textContent  = stockBajo.length;
 
-    // Lista ventas hoy
     const listaV = document.getElementById('dash-ventas-lista');
-    if (ventasHoy.length === 0) {
-      listaV.innerHTML = '<div class="list-empty">Sin ventas registradas hoy</div>';
-    } else {
-      listaV.innerHTML = ventasHoy.slice(-5).reverse().map(v => `
-        <div class="dash-list-item">
-          <span class="dash-list-label">${v.notas || 'Venta'}</span>
-          <span class="dash-list-valor">${formatPeso(v.total)}</span>
-        </div>
-      `).join('');
-    }
+    listaV.innerHTML = ventasHoy.length === 0
+      ? '<div class="list-empty">Sin ventas registradas hoy</div>'
+      : ventasHoy.slice(-5).reverse().map(v => `
+          <div class="dash-list-item">
+            <span class="dash-list-label">${v.notas || 'Venta'} ${v.hora ? '· ' + v.hora : ''}</span>
+            <span class="dash-list-valor">${formatPeso(v.total)}</span>
+          </div>`).join('');
 
-    // Lista stock bajo
     const listaS = document.getElementById('dash-stock-lista');
-    if (stockBajo.length === 0) {
-      listaS.innerHTML = '<div class="list-empty">Todo el stock está bien</div>';
-    } else {
-      listaS.innerHTML = stockBajo.slice(0, 6).map(p => `
-        <div class="dash-list-item">
-          <span class="dash-list-label">${p.nombre} — ${p.variante || ''}</span>
-          <span class="dash-list-stock low">${p.stock} unid.</span>
-        </div>
-      `).join('');
-    }
-
+    listaS.innerHTML = stockBajo.length === 0
+      ? '<div class="list-empty">Todo el stock está bien</div>'
+      : stockBajo.slice(0, 6).map(p => `
+          <div class="dash-list-item">
+            <span class="dash-list-label">${p.nombre} ${p.variante ? '— ' + p.variante : ''}</span>
+            <span class="dash-list-stock ${Number(p.stock) === 0 ? 'out' : 'low'}">${p.stock} unid.</span>
+          </div>`).join('');
   } catch (e) {
     console.error('Dashboard error:', e);
+  } finally {
+    setLoading('dashboard', false);
   }
 }
 
-// ── PRODUCTOS ─────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  PRODUCTOS
+// ══════════════════════════════════════════════════════════════
 async function cargarProductos() {
-  const res = await apiGet({ action: 'getAll', hoja: 'productos', token });
-  productosCache = res.data || [];
-  renderProductos(productosCache);
-
-  document.getElementById('prod-search').oninput = () => filtrarProductos();
-  document.getElementById('prod-filter-cat').onchange = () => filtrarProductos();
+  setLoading('productos', true);
+  try {
+    const res = await apiGet({ action: 'getAll', hoja: 'productos', token });
+    productosCache = res.data || [];
+    renderProductos(productosCache);
+    document.getElementById('prod-search').oninput   = () => filtrarProductos();
+    document.getElementById('prod-filter-cat').onchange = () => filtrarProductos();
+  } finally {
+    setLoading('productos', false);
+  }
 }
 
 function filtrarProductos() {
   const q   = document.getElementById('prod-search').value.toLowerCase();
   const cat = document.getElementById('prod-filter-cat').value;
-  const filtrados = productosCache.filter(p => {
+  renderProductos(productosCache.filter(p => {
     const matchQ   = !q   || p.nombre?.toLowerCase().includes(q) || p.codigo?.toLowerCase().includes(q);
     const matchCat = !cat || p.categoria === cat;
     return matchQ && matchCat;
-  });
-  renderProductos(filtrados);
+  }));
 }
 
 function renderProductos(lista) {
@@ -343,18 +341,20 @@ function renderProductos(lista) {
   }
   const stockMin = Number(localStorage.getItem('tcd_stock_min') || 3);
   grid.innerHTML = lista.map(p => {
-    const stock   = Number(p.stock || 0);
+    const stock    = Number(p.stock || 0);
     const stockCls = stock === 0 ? 'out' : stock <= stockMin ? 'low' : 'ok';
     const stockTxt = stock === 0 ? 'Sin stock' : stock + ' unid.';
     const prefijo  = PREFIJOS[p.categoria] || 'OTR';
-    const fotoHTML = p.foto
-      ? `<div class="prod-card-img"><img src="${p.foto}" alt="${p.nombre}" loading="lazy" /></div>`
-      : `<div class="prod-card-img">📦</div>`;
     return `
       <div class="prod-card" data-id="${p.id}">
-        ${fotoHTML}
+        <div class="prod-card-img" onclick="editarProducto('${p.id}')">
+          ${p.foto ? `<img src="${p.foto}" alt="${p.nombre}" loading="lazy" />` : '📦'}
+        </div>
         <div class="prod-card-body">
-          <div class="prod-card-codigo">${p.codigo || ''} <span class="cat-badge cat-${prefijo}">${p.categoria || ''}</span></div>
+          <div class="prod-card-codigo">
+            ${p.codigo || ''}
+            <span class="cat-badge cat-${prefijo}">${p.categoria || ''}</span>
+          </div>
           <div class="prod-card-nombre">${p.nombre || ''}</div>
           <div class="prod-card-variante">${p.variante || ''}</div>
           <div class="prod-card-row">
@@ -367,16 +367,14 @@ function renderProductos(lista) {
                 onchange="toggleVisible('${p.id}', this.checked)" />
               <span class="toggle-track"></span>
             </label>
-            <span class="toggle-label" style="font-size:11px">Visible</span>
+            <span class="toggle-label" style="font-size:11px">Visible en tienda</span>
           </div>
         </div>
         <div class="prod-card-footer">
           <button class="btn-icon" onclick="editarProducto('${p.id}')" title="Editar">✎</button>
-          <button class="btn-icon" onclick="subirFotoProducto('${p.id}','${p.categoria}')" title="Foto">🖼</button>
-          <button class="btn-icon danger" onclick="eliminarProducto('${p.id}','${p.foto || ''}')" title="Eliminar">✕</button>
+          <button class="btn-icon danger" onclick="confirmarEliminar('productos','${p.id}','${p.foto || ''}','producto')" title="Eliminar">✕</button>
         </div>
-      </div>
-    `;
+      </div>`;
   }).join('');
 }
 
@@ -384,18 +382,20 @@ async function toggleVisible(id, visible) {
   await apiPost({ action: 'actualizarCampo', hoja: 'productos', id, campo: 'visible', valor: String(visible) });
 }
 
+// Modal producto — foto integrada
 function modalProducto(prod = null) {
   const esNuevo = !prod;
   const cats    = CATEGORIAS.map(c => `<option${prod?.categoria === c ? ' selected' : ''}>${c}</option>`).join('');
+
   abrirModal(esNuevo ? 'Nuevo producto' : 'Editar producto', `
     <div class="field">
       <label>Categoría</label>
       <select id="mp-cat" class="input-select" onchange="actualizarCodigoProd()">${cats}</select>
     </div>
     <div class="field">
-      <label>Código</label>
-      <input type="text" id="mp-codigo" class="input-text" value="${prod?.codigo || ''}" readonly
-        style="opacity:.6;cursor:not-allowed" />
+      <label>Código (auto)</label>
+      <input type="text" id="mp-codigo" class="input-text" value="${prod?.codigo || ''}"
+        readonly style="opacity:.6;cursor:not-allowed" />
     </div>
     <div class="field">
       <label>Nombre</label>
@@ -406,7 +406,10 @@ function modalProducto(prod = null) {
       <input type="text" id="mp-variante" class="input-text" value="${prod?.variante || ''}" />
     </div>
     <div class="field">
-      <label>Descripción <button class="btn-gemini" type="button" onclick="generarDescripcion()">✦ Gemini</button></label>
+      <label>
+        Descripción
+        <button class="btn-gemini" type="button" onclick="generarDescripcion()">✦ Gemini</button>
+      </label>
       <textarea id="mp-descripcion" class="input-text" rows="3">${prod?.descripcion || ''}</textarea>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
@@ -429,19 +432,39 @@ function modalProducto(prod = null) {
         <input type="number" id="mp-stock-min" class="input-text" value="${prod?.stockMinimo || 3}" />
       </div>
     </div>
-    <label class="toggle-wrap">
-      <input type="checkbox" id="mp-visible" ${prod?.visible === 'true' || prod?.visible === true ? 'checked' : ''} />
-      <span class="toggle-track"></span>
-      <span class="toggle-label">Visible en la tienda</span>
-    </label>
-    <label class="toggle-wrap">
-      <input type="checkbox" id="mp-destacado" ${prod?.destacado === 'true' || prod?.destacado === true ? 'checked' : ''} />
-      <span class="toggle-track"></span>
-      <span class="toggle-label">Destacado</span>
-    </label>
+    <div style="display:flex;gap:1.2rem;flex-wrap:wrap">
+      <label class="toggle-wrap">
+        <input type="checkbox" id="mp-visible"
+          ${prod?.visible === 'true' || prod?.visible === true ? 'checked' : ''} />
+        <span class="toggle-track"></span>
+        <span class="toggle-label">Visible en tienda</span>
+      </label>
+      <label class="toggle-wrap">
+        <input type="checkbox" id="mp-destacado"
+          ${prod?.destacado === 'true' || prod?.destacado === true ? 'checked' : ''} />
+        <span class="toggle-track"></span>
+        <span class="toggle-label">Destacado</span>
+      </label>
+    </div>
+    <div class="field">
+      <label>Foto del producto</label>
+      <div class="foto-upload-area" id="foto-drop-prod">
+        <input type="file" id="foto-input-prod" accept="image/*"
+          onchange="previsualizarFotoProd(this)" />
+        <div class="foto-upload-icon">🖼</div>
+        <div class="foto-upload-text">
+          ${prod?.foto
+            ? 'Subir nueva foto (reemplaza la actual)'
+            : 'Hacé clic o arrastrá — se convierte a JPG automáticamente'}
+        </div>
+      </div>
+      ${prod?.foto
+        ? `<img src="${prod.foto}" class="foto-preview" alt="foto actual" />`
+        : '<img id="foto-preview-prod" class="foto-preview hidden" alt="preview" />'}
+    </div>
   `, `
     <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-    <button class="btn-primary" onclick="guardarProducto('${prod?.id || ''}')">Guardar</button>
+    <button class="btn-primary" onclick="guardarProducto('${prod?.id || ''}','${prod?.foto || ''}')">Guardar</button>
   `);
 
   if (esNuevo) actualizarCodigoProd();
@@ -453,6 +476,16 @@ async function actualizarCodigoProd() {
   const res = await apiGet({ action: 'siguienteCodigo', hoja: 'productos', categoria: cat });
   const inp = document.getElementById('mp-codigo');
   if (inp) inp.value = res.codigo || '';
+}
+
+function previsualizarFotoProd(input) {
+  const file = input.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const preview = document.getElementById('foto-preview-prod');
+  if (preview) {
+    preview.src = URL.createObjectURL(file);
+    preview.classList.remove('hidden');
+  }
 }
 
 async function generarDescripcion() {
@@ -470,31 +503,55 @@ async function generarDescripcion() {
   else toast('Gemini no respondió', 'error');
 }
 
-async function guardarProducto(idExistente) {
-  const fila = {
-    id:          idExistente || 'PRD-' + Date.now(),
-    codigo:      document.getElementById('mp-codigo').value,
-    nombre:      document.getElementById('mp-nombre').value,
-    categoria:   document.getElementById('mp-cat').value,
-    variante:    document.getElementById('mp-variante').value,
-    descripcion: document.getElementById('mp-descripcion').value,
-    precioVenta: document.getElementById('mp-pventa').value,
-    precioCosto: document.getElementById('mp-pcosto').value,
-    stock:       document.getElementById('mp-stock').value,
-    stockMinimo: document.getElementById('mp-stock-min').value,
-    visible:     document.getElementById('mp-visible').checked ? 'true' : 'false',
-    destacado:   document.getElementById('mp-destacado').checked ? 'true' : 'false',
-    foto:        '',
-    creadoEn:    idExistente ? '' : fechaHoy()
-  };
-  if (!fila.nombre) { toast('El nombre es obligatorio', 'error'); return; }
-  const res = await apiPost({ action: 'guardar', hoja: 'productos', fila });
-  if (res.ok) {
-    cerrarModal();
-    toast('Producto guardado');
-    await cargarProductos();
-  } else {
-    toast(res.error || 'Error al guardar', 'error');
+async function guardarProducto(idExistente, fotoAnterior) {
+  const nombre = document.getElementById('mp-nombre').value;
+  if (!nombre) { toast('El nombre es obligatorio', 'error'); return; }
+
+  const btn = document.querySelector('#modal-footer .btn-primary');
+  btn.textContent = 'Guardando...';
+  btn.disabled = true;
+
+  try {
+    const id = idExistente || 'PRD-' + Date.now();
+
+    // Subir foto si hay una nueva
+    let fotoUrl = fotoAnterior || '';
+    const fileInput = document.getElementById('foto-input-prod');
+    if (fileInput?.files[0]) {
+      const cat = document.getElementById('mp-cat').value;
+      const b64 = await comprimirImagen(fileInput.files[0]);
+      const resF = await apiPost({ action: 'subirFoto', hoja: 'productos', id, b64, nombre: id, categoria: cat });
+      if (resF.ok) fotoUrl = resF.url;
+    }
+
+    const fila = {
+      id,
+      codigo:      document.getElementById('mp-codigo').value,
+      nombre,
+      categoria:   document.getElementById('mp-cat').value,
+      variante:    document.getElementById('mp-variante').value,
+      descripcion: document.getElementById('mp-descripcion').value,
+      precioVenta: document.getElementById('mp-pventa').value,
+      precioCosto: document.getElementById('mp-pcosto').value,
+      stock:       document.getElementById('mp-stock').value,
+      stockMinimo: document.getElementById('mp-stock-min').value,
+      visible:     document.getElementById('mp-visible').checked ? 'true' : 'false',
+      destacado:   document.getElementById('mp-destacado').checked ? 'true' : 'false',
+      foto:        fotoUrl,
+      creadoEn:    idExistente ? '' : fechaHoy()
+    };
+
+    const res = await apiPost({ action: 'guardar', hoja: 'productos', fila });
+    if (res.ok) {
+      cerrarModal();
+      toast('Producto guardado');
+      await cargarProductos();
+    } else {
+      toast(res.error || 'Error al guardar', 'error');
+    }
+  } finally {
+    btn.textContent = 'Guardar';
+    btn.disabled = false;
   }
 }
 
@@ -503,82 +560,47 @@ function editarProducto(id) {
   if (prod) modalProducto(prod);
 }
 
-function subirFotoProducto(id, categoria) {
-  abrirModal('Subir foto', `
-    <div class="foto-upload-area" id="foto-drop">
-      <input type="file" id="foto-input" accept="image/*" onchange="previsualizarFoto(this)" />
-      <div class="foto-upload-icon">🖼</div>
-      <div class="foto-upload-text">Hacé clic o arrastrá una imagen<br><small>Se convierte automáticamente a JPG</small></div>
-    </div>
-    <img id="foto-preview-img" class="foto-preview hidden" alt="preview" />
+// ══════════════════════════════════════════════════════════════
+//  ELIMINAR GENÉRICO (con modal confirmación)
+// ══════════════════════════════════════════════════════════════
+function confirmarEliminar(hoja, id, fotoUrl, tipo) {
+  abrirModal(`Eliminar ${tipo}`, `
+    <p style="color:var(--text-secondary)">
+      ¿Seguro que querés eliminar este ${tipo}? Esta acción no se puede deshacer.
+    </p>
   `, `
     <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-    <button class="btn-primary" onclick="confirmarSubidaFoto('${id}','${categoria}','productos')">Subir</button>
+    <button class="btn-primary" style="background:var(--coral)"
+      onclick="ejecutarEliminar('${hoja}','${id}','${fotoUrl}')">Eliminar</button>
   `);
 }
 
-function previsualizarFoto(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const preview = document.getElementById('foto-preview-img');
-  if (file.type.startsWith('image/')) {
-    const url = URL.createObjectURL(file);
-    preview.src = url;
-    preview.classList.remove('hidden');
-  }
-}
-
-async function confirmarSubidaFoto(id, categoria, hoja) {
-  const input = document.getElementById('foto-input');
-  if (!input?.files[0]) { toast('Seleccioná un archivo', 'error'); return; }
-  const file = input.files[0];
-  const btn = document.querySelector('#modal-footer .btn-primary');
-  btn.textContent = 'Subiendo...';
-  btn.disabled = true;
-  try {
-    const b64 = await comprimirImagen(file);
-    const res = await apiPost({ action: 'subirFoto', hoja, id, b64, nombre: id, categoria });
-    if (res.ok) {
-      cerrarModal();
-      toast('Foto subida');
-      if (hoja === 'productos') await cargarProductos();
-      if (hoja === 'novedades') await cargarNovedades();
-    } else {
-      toast(res.error || 'Error al subir', 'error');
-    }
-  } catch (e) {
-    toast('Error al procesar la imagen', 'error');
-  } finally {
-    btn.textContent = 'Subir';
-    btn.disabled = false;
-  }
-}
-
-function eliminarProducto(id, fotoUrl) {
-  abrirModal('Eliminar producto', `
-    <p style="color:var(--text-secondary)">¿Seguro que querés eliminar este producto? Esta acción no se puede deshacer.</p>
-  `, `
-    <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-    <button class="btn-primary" style="background:var(--coral)" onclick="confirmarEliminarProducto('${id}','${fotoUrl}')">Eliminar</button>
-  `);
-}
-
-async function confirmarEliminarProducto(id, fotoUrl) {
-  const res = await apiPost({ action: 'eliminarConFoto', hoja: 'productos', id, fotoUrl });
+async function ejecutarEliminar(hoja, id, fotoUrl) {
+  const res = await apiPost({ action: 'eliminarConFoto', hoja, id, fotoUrl });
   if (res.ok) {
     cerrarModal();
-    toast('Producto eliminado');
-    await cargarProductos();
+    toast('Eliminado correctamente');
+    if (hoja === 'productos') await cargarProductos();
+    if (hoja === 'ventas')    await cargarVentas();
+    if (hoja === 'gastos')    await cargarGastos();
+    if (hoja === 'novedades') await cargarNovedades();
   } else {
     toast(res.error || 'Error al eliminar', 'error');
   }
 }
 
-// ── INVENTARIOS ───────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  INVENTARIOS
+// ══════════════════════════════════════════════════════════════
 async function cargarInventarios() {
-  const res = await apiGet({ action: 'getInventarios', token });
-  inventariosCache = res.data || [];
-  renderInventarios(inventariosCache);
+  setLoading('inventarios', true);
+  try {
+    const res = await apiGet({ action: 'getInventarios', token });
+    inventariosCache = res.data || [];
+    renderInventarios(inventariosCache);
+  } finally {
+    setLoading('inventarios', false);
+  }
 }
 
 function renderInventarios(lista) {
@@ -595,13 +617,12 @@ function renderInventarios(lista) {
           ${inv.privado === 'true' ? 'Privado' : 'Público'}
         </span>
       </div>
-      <div class="inv-card-prefijo">Prefijo: ${inv.prefijo} · Hoja: ${inv.hojaId}</div>
+      <div class="inv-card-prefijo">Prefijo: ${inv.prefijo} · Creado: ${inv.creadoEn || ''}</div>
       <div class="inv-card-actions">
         <button class="btn-secondary" onclick="abrirInventario('${inv.hojaId}','${inv.nombre}')">Ver items</button>
         <button class="btn-icon danger" onclick="eliminarInventarioModal('${inv.hojaId}')">✕</button>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
 function modalNuevoInventario() {
@@ -612,12 +633,13 @@ function modalNuevoInventario() {
     </div>
     <div class="field">
       <label>Prefijo (3 letras)</label>
-      <input type="text" id="inv-prefijo" class="input-text" placeholder="Ej: VER" maxlength="5" style="text-transform:uppercase" />
+      <input type="text" id="inv-prefijo" class="input-text" placeholder="Ej: VER"
+        maxlength="5" style="text-transform:uppercase" />
     </div>
     <label class="toggle-wrap">
       <input type="checkbox" id="inv-privado" />
       <span class="toggle-track"></span>
-      <span class="toggle-label">Inventario privado (solo visible en admin)</span>
+      <span class="toggle-label">Privado (solo visible en admin)</span>
     </label>
   `, `
     <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
@@ -631,20 +653,16 @@ async function crearInventario() {
   const privado = document.getElementById('inv-privado').checked;
   if (!nombre || !prefijo) { toast('Completá nombre y prefijo', 'error'); return; }
   const res = await apiPost({ action: 'crearInventario', nombre, prefijo, privado });
-  if (res.ok) {
-    cerrarModal();
-    toast('Inventario creado');
-    await cargarInventarios();
-  } else {
-    toast(res.error || 'Error al crear', 'error');
-  }
+  if (res.ok) { cerrarModal(); toast('Inventario creado'); await cargarInventarios(); }
+  else toast(res.error || 'Error al crear', 'error');
 }
 
 async function abrirInventario(hojaId, nombre) {
-  const res = await apiGet({ action: 'getAll', hoja: hojaId, token });
+  const res   = await apiGet({ action: 'getAll', hoja: hojaId, token });
   const items = res.data || [];
   abrirModal('Inventario: ' + nombre, `
-    <button class="btn-primary" style="margin-bottom:1rem" onclick="modalNuevoItemInventario('${hojaId}')">+ Agregar item</button>
+    <button class="btn-primary" style="margin-bottom:1rem"
+      onclick="modalNuevoItemInventario('${hojaId}')">+ Agregar item</button>
     ${items.length === 0
       ? '<div class="list-empty">Sin items aún</div>'
       : `<table class="tabla">
@@ -655,12 +673,14 @@ async function abrirInventario(hojaId, nombre) {
               <td>${it.nombre || ''}</td>
               <td>${it.categoria || ''}</td>
               <td>${it.cantidad || 0}</td>
-              <td><button class="btn-icon danger" onclick="eliminarItemInv('${hojaId}','${it.id}')">✕</button></td>
-            </tr>
-          `).join('')}</tbody>
+              <td>
+                <button class="btn-icon danger"
+                  onclick="ejecutarEliminar('${hojaId}','${it.id}','')">✕</button>
+              </td>
+            </tr>`).join('')}
+          </tbody>
         </table>`
-    }
-  `);
+    }`);
 }
 
 function modalNuevoItemInventario(hojaId) {
@@ -704,15 +724,11 @@ async function guardarItemInventario(hojaId) {
   else toast(res.error || 'Error', 'error');
 }
 
-async function eliminarItemInv(hojaId, id) {
-  const res = await apiPost({ action: 'eliminar', hoja: hojaId, id });
-  if (res.ok) { cerrarModal(); toast('Item eliminado'); }
-  else toast(res.error || 'Error', 'error');
-}
-
 function eliminarInventarioModal(hojaId) {
   abrirModal('Eliminar inventario', `
-    <p style="color:var(--text-secondary)">¿Eliminar este inventario y todos sus items? También podés borrar las fotos del Drive.</p>
+    <p style="color:var(--text-secondary)">
+      ¿Eliminar este inventario y todos sus items?
+    </p>
     <label class="toggle-wrap" style="margin-top:.8rem">
       <input type="checkbox" id="inv-borrar-drive" />
       <span class="toggle-track"></span>
@@ -728,22 +744,24 @@ function eliminarInventarioModal(hojaId) {
 async function confirmarEliminarInventario(hojaId) {
   const borrarDrive = document.getElementById('inv-borrar-drive').checked;
   const res = await apiPost({ action: 'eliminarInventario', hojaId, borrarDrive });
-  if (res.ok) {
-    cerrarModal();
-    toast('Inventario eliminado');
-    await cargarInventarios();
-  } else {
-    toast(res.error || 'Error', 'error');
-  }
+  if (res.ok) { cerrarModal(); toast('Inventario eliminado'); await cargarInventarios(); }
+  else toast(res.error || 'Error', 'error');
 }
 
-// ── VENTAS ────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  VENTAS
+// ══════════════════════════════════════════════════════════════
 async function cargarVentas() {
   const fecha = document.getElementById('ventas-fecha').value || fechaHoy();
   document.getElementById('ventas-fecha').value = fecha;
-  const res = await apiGet({ action: 'getAll', hoja: 'ventas', token });
-  ventasCache = (res.data || []).filter(v => v.fecha === fecha);
-  renderTablaVentas(ventasCache);
+  setLoading('ventas', true);
+  try {
+    const res = await apiGet({ action: 'getAll', hoja: 'ventas', token });
+    ventasCache = (res.data || []).filter(v => v.fecha === fecha);
+    renderTablaVentas(ventasCache);
+  } finally {
+    setLoading('ventas', false);
+  }
 }
 
 function renderTablaVentas(lista) {
@@ -754,33 +772,42 @@ function renderTablaVentas(lista) {
   }
   wrap.innerHTML = `
     <table class="tabla">
-      <thead><tr><th>Hora</th><th>Productos</th><th>Total</th><th>Pago</th><th>Canal</th><th>Comprobante</th><th></th></tr></thead>
-      <tbody>${lista.map(v => `
+      <thead>
         <tr>
-          <td>${v.hora || ''}</td>
-          <td>${v.notas || ''}</td>
-          <td>${formatPeso(v.total)}</td>
-          <td>${v.medioPago || ''}</td>
-          <td>${v.canal || ''}</td>
-          <td>${v.comprobante
-            ? `<a href="${v.comprobante}" target="_blank" style="color:var(--azul)">Ver</a>`
-            : '—'}</td>
-          <td><button class="btn-icon danger" onclick="eliminarVenta('${v.id}','${v.comprobante || ''}')">✕</button></td>
+          <th>Hora</th><th>Descripción</th><th>Total</th>
+          <th>Pago</th><th>Canal</th><th>Comprobante</th><th></th>
         </tr>
-      `).join('')}</tbody>
-    </table>
-  `;
+      </thead>
+      <tbody>
+        ${lista.map(v => `
+          <tr>
+            <td>${v.hora || '—'}</td>
+            <td>${v.notas || ''}</td>
+            <td style="font-weight:700;color:var(--verde)">${formatPeso(v.total)}</td>
+            <td>${v.medioPago || ''}</td>
+            <td>${v.canal || ''}</td>
+            <td>${v.comprobante
+              ? `<a href="${v.comprobante}" target="_blank" style="color:var(--azul);font-weight:600">Ver</a>`
+              : '—'}</td>
+            <td>
+              <button class="btn-icon danger"
+                onclick="confirmarEliminar('ventas','${v.id}','${v.comprobante || ''}','venta')">✕</button>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
 }
 
 function modalNuevaVenta() {
   abrirModal('Registrar venta', `
     <div class="field">
-      <label>Descripción / productos</label>
-      <input type="text" id="vta-notas" class="input-text" placeholder="Ej: 2x gomitas, 1x vinchas" />
+      <label>Descripción / productos vendidos</label>
+      <input type="text" id="vta-notas" class="input-text"
+        placeholder="Ej: 2x gomitas rosas, 1x vincha" />
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
       <div class="field">
-        <label>Total</label>
+        <label>Total $</label>
         <input type="number" id="vta-total" class="input-text" placeholder="0" />
       </div>
       <div class="field">
@@ -801,14 +828,14 @@ function modalNuevaVenta() {
       </select>
     </div>
     <div class="field">
-      <label>Comprobante (imagen o PDF)</label>
+      <label>Comprobante (imagen o PDF — opcional)</label>
       <div class="foto-upload-area">
         <input type="file" id="vta-comprobante" accept="image/*,application/pdf"
-          onchange="previsualizarComprobante(this)" />
+          onchange="previsualizarComp('vta-comp-preview', this)" />
         <div class="foto-upload-icon">📎</div>
-        <div class="foto-upload-text">Opcional — imagen o PDF</div>
+        <div class="foto-upload-text">Ticket, captura o PDF</div>
       </div>
-      <img id="vta-comp-preview" class="foto-preview hidden" alt="preview" style="margin-top:6px" />
+      <img id="vta-comp-preview" class="foto-preview hidden" alt="preview" />
     </div>
   `, `
     <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
@@ -816,11 +843,11 @@ function modalNuevaVenta() {
   `);
 }
 
-function previsualizarComprobante(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const preview = document.getElementById('vta-comp-preview');
-  if (file.type.startsWith('image/') && preview) {
+function previsualizarComp(previewId, input) {
+  const file    = input.files[0];
+  const preview = document.getElementById(previewId);
+  if (!file || !preview) return;
+  if (file.type.startsWith('image/')) {
     preview.src = URL.createObjectURL(file);
     preview.classList.remove('hidden');
   }
@@ -829,68 +856,52 @@ function previsualizarComprobante(input) {
 async function guardarVenta() {
   const total = document.getElementById('vta-total').value;
   if (!total) { toast('Ingresá el total', 'error'); return; }
-
   const btn = document.querySelector('#modal-footer .btn-primary');
   btn.textContent = 'Guardando...';
   btn.disabled = true;
-
   try {
     const id    = 'VTA-' + Date.now();
     const fecha = fechaHoy();
-    const hora  = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-
-    // Subir comprobante si hay
+    const hora  = horaAhora();
     let compUrl = '';
     const fileInput = document.getElementById('vta-comprobante');
     if (fileInput?.files[0]) {
-      const b64 = await comprimirImagen(fileInput.files[0]);
-      const resComp = await apiPost({
-        action: 'subirComprobante',
-        id, b64,
-        nombre: id,
-        fecha,
-        tipo: 'venta'
-      });
+      const b64     = await comprimirImagen(fileInput.files[0]);
+      const resComp = await apiPost({ action: 'subirComprobante', id, b64, nombre: id, fecha, tipo: 'venta' });
       if (resComp.ok) compUrl = resComp.url;
     }
-
     const fila = {
       id, fecha, hora,
-      productos:  '',
+      productos:   '',
       total,
-      medioPago:  document.getElementById('vta-pago').value,
-      canal:      document.getElementById('vta-canal').value,
-      notas:      document.getElementById('vta-notas').value,
+      medioPago:   document.getElementById('vta-pago').value,
+      canal:       document.getElementById('vta-canal').value,
+      notas:       document.getElementById('vta-notas').value,
       comprobante: compUrl
     };
-
     const res = await apiPost({ action: 'guardar', hoja: 'ventas', fila });
-    if (res.ok) {
-      cerrarModal();
-      toast('Venta registrada');
-      await cargarVentas();
-    } else {
-      toast(res.error || 'Error', 'error');
-    }
+    if (res.ok) { cerrarModal(); toast('Venta registrada'); await cargarVentas(); }
+    else toast(res.error || 'Error', 'error');
   } finally {
     btn.textContent = 'Registrar';
     btn.disabled = false;
   }
 }
 
-async function eliminarVenta(id, comprobante) {
-  const res = await apiPost({ action: 'eliminarConFoto', hoja: 'ventas', id, fotoUrl: comprobante });
-  if (res.ok) { toast('Venta eliminada'); await cargarVentas(); }
-  else toast(res.error || 'Error', 'error');
-}
-
-// ── GASTOS ────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  GASTOS
+// ══════════════════════════════════════════════════════════════
 async function cargarGastos() {
   const fecha = document.getElementById('gastos-fecha').value || fechaHoy();
   document.getElementById('gastos-fecha').value = fecha;
-  const res = await apiGet({ action: 'getAll', hoja: 'gastos', token });
-  gastosCache = (res.data || []).filter(g => g.fecha === fecha);
-  renderTablaGastos(gastosCache);
+  setLoading('gastos', true);
+  try {
+    const res = await apiGet({ action: 'getAll', hoja: 'gastos', token });
+    gastosCache = (res.data || []).filter(g => g.fecha === fecha);
+    renderTablaGastos(gastosCache);
+  } finally {
+    setLoading('gastos', false);
+  }
 }
 
 function renderTablaGastos(lista) {
@@ -901,21 +912,29 @@ function renderTablaGastos(lista) {
   }
   wrap.innerHTML = `
     <table class="tabla">
-      <thead><tr><th>Tipo</th><th>Descripción</th><th>Proveedor</th><th>Monto</th><th>Comprobante</th><th></th></tr></thead>
-      <tbody>${lista.map(g => `
+      <thead>
         <tr>
-          <td>${g.tipo || ''}</td>
-          <td>${g.descripcion || ''}</td>
-          <td>${g.proveedor || ''}</td>
-          <td>${formatPeso(g.monto)}</td>
-          <td>${g.comprobante
-            ? `<a href="${g.comprobante}" target="_blank" style="color:var(--azul)">Ver</a>`
-            : '—'}</td>
-          <td><button class="btn-icon danger" onclick="eliminarGasto('${g.id}','${g.comprobante || ''}')">✕</button></td>
+          <th>Tipo</th><th>Descripción</th><th>Proveedor</th>
+          <th>Monto</th><th>Comprobante</th><th></th>
         </tr>
-      `).join('')}</tbody>
-    </table>
-  `;
+      </thead>
+      <tbody>
+        ${lista.map(g => `
+          <tr>
+            <td>${g.tipo || ''}</td>
+            <td>${g.descripcion || ''}</td>
+            <td>${g.proveedor || '—'}</td>
+            <td style="font-weight:700;color:var(--coral)">${formatPeso(g.monto)}</td>
+            <td>${g.comprobante
+              ? `<a href="${g.comprobante}" target="_blank" style="color:var(--azul);font-weight:600">Ver</a>`
+              : '—'}</td>
+            <td>
+              <button class="btn-icon danger"
+                onclick="confirmarEliminar('gastos','${g.id}','${g.comprobante || ''}','gasto')">✕</button>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
 }
 
 function modalNuevoGasto() {
@@ -931,25 +950,26 @@ function modalNuevoGasto() {
     </div>
     <div class="field">
       <label>Descripción</label>
-      <input type="text" id="gto-desc" class="input-text" placeholder="Ej: Compra gomitas mayorista" />
+      <input type="text" id="gto-desc" class="input-text"
+        placeholder="Ej: Compra gomitas mayorista" />
     </div>
     <div class="field">
       <label>Proveedor</label>
       <input type="text" id="gto-prov" class="input-text" />
     </div>
     <div class="field">
-      <label>Monto</label>
+      <label>Monto $</label>
       <input type="number" id="gto-monto" class="input-text" placeholder="0" />
     </div>
     <div class="field">
-      <label>Comprobante (imagen o PDF)</label>
+      <label>Comprobante (imagen o PDF — opcional)</label>
       <div class="foto-upload-area">
         <input type="file" id="gto-comprobante" accept="image/*,application/pdf"
-          onchange="previsualizarComprobanteGasto(this)" />
+          onchange="previsualizarComp('gto-comp-preview', this)" />
         <div class="foto-upload-icon">📎</div>
-        <div class="foto-upload-text">Ticket, factura o foto — opcional</div>
+        <div class="foto-upload-text">Ticket, factura o foto</div>
       </div>
-      <img id="gto-comp-preview" class="foto-preview hidden" alt="preview" style="margin-top:6px" />
+      <img id="gto-comp-preview" class="foto-preview hidden" alt="preview" />
     </div>
   `, `
     <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
@@ -957,42 +977,22 @@ function modalNuevoGasto() {
   `);
 }
 
-function previsualizarComprobanteGasto(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const preview = document.getElementById('gto-comp-preview');
-  if (file.type.startsWith('image/') && preview) {
-    preview.src = URL.createObjectURL(file);
-    preview.classList.remove('hidden');
-  }
-}
-
 async function guardarGasto() {
   const monto = document.getElementById('gto-monto').value;
   if (!monto) { toast('Ingresá el monto', 'error'); return; }
-
   const btn = document.querySelector('#modal-footer .btn-primary');
   btn.textContent = 'Guardando...';
   btn.disabled = true;
-
   try {
     const id    = 'GTO-' + Date.now();
     const fecha = fechaHoy();
-
     let compUrl = '';
     const fileInput = document.getElementById('gto-comprobante');
     if (fileInput?.files[0]) {
-      const b64 = await comprimirImagen(fileInput.files[0]);
-      const resComp = await apiPost({
-        action: 'subirComprobante',
-        id, b64,
-        nombre: id,
-        fecha,
-        tipo: 'gasto'
-      });
+      const b64     = await comprimirImagen(fileInput.files[0]);
+      const resComp = await apiPost({ action: 'subirComprobante', id, b64, nombre: id, fecha, tipo: 'gasto' });
       if (resComp.ok) compUrl = resComp.url;
     }
-
     const fila = {
       id, fecha,
       tipo:        document.getElementById('gto-tipo').value,
@@ -1001,90 +1001,155 @@ async function guardarGasto() {
       monto,
       comprobante: compUrl
     };
-
     const res = await apiPost({ action: 'guardar', hoja: 'gastos', fila });
-    if (res.ok) {
-      cerrarModal();
-      toast('Gasto registrado');
-      await cargarGastos();
-    } else {
-      toast(res.error || 'Error', 'error');
-    }
+    if (res.ok) { cerrarModal(); toast('Gasto registrado'); await cargarGastos(); }
+    else toast(res.error || 'Error', 'error');
   } finally {
     btn.textContent = 'Registrar';
     btn.disabled = false;
   }
 }
 
-async function eliminarGasto(id, comprobante) {
-  const res = await apiPost({ action: 'eliminarConFoto', hoja: 'gastos', id, fotoUrl: comprobante });
-  if (res.ok) { toast('Gasto eliminado'); await cargarGastos(); }
-  else toast(res.error || 'Error', 'error');
-}
-
-// ── CAJA ──────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  CAJA
+// ══════════════════════════════════════════════════════════════
 async function cargarCaja() {
   const fecha = document.getElementById('caja-fecha').value || fechaHoy();
   document.getElementById('caja-fecha').value = fecha;
+  setLoading('caja', true);
+  try {
+    const [rV, rG] = await Promise.all([
+      apiGet({ action: 'getAll', hoja: 'ventas', token }),
+      apiGet({ action: 'getAll', hoja: 'gastos', token })
+    ]);
+    const ventas = (rV.data || []).filter(v => v.fecha === fecha);
+    const gastos = (rG.data || []).filter(g => g.fecha === fecha);
+    const totalV = ventas.reduce((s, v) => s + Number(v.total || 0), 0);
+    const totalG = gastos.reduce((s, g) => s + Number(g.monto || 0), 0);
 
-  const [rV, rG] = await Promise.all([
-    apiGet({ action: 'getAll', hoja: 'ventas', token }),
-    apiGet({ action: 'getAll', hoja: 'gastos', token })
-  ]);
+    document.getElementById('caja-ingresos').textContent    = formatPeso(totalV);
+    document.getElementById('caja-gastos-total').textContent = formatPeso(totalG);
+    const saldoEl = document.getElementById('caja-saldo-total');
+    saldoEl.textContent = formatPeso(totalV - totalG);
+    saldoEl.style.color = (totalV - totalG) >= 0 ? 'var(--verde)' : 'var(--coral)';
 
-  const ventas = (rV.data || []).filter(v => v.fecha === fecha);
-  const gastos = (rG.data || []).filter(g => g.fecha === fecha);
+    const dv = document.getElementById('caja-ventas-detalle');
+    dv.innerHTML = ventas.length
+      ? ventas.map(v => `
+          <div class="dash-list-item">
+            <span>${v.hora ? v.hora + ' — ' : ''}${v.notas || 'Venta'}</span>
+            <span style="font-weight:700;color:var(--verde)">${formatPeso(v.total)}</span>
+          </div>`).join('')
+      : '<div class="list-empty">Sin ventas</div>';
 
-  const totalV = ventas.reduce((s, v) => s + Number(v.total || 0), 0);
-  const totalG = gastos.reduce((s, g) => s + Number(g.monto || 0), 0);
-
-  document.getElementById('caja-ingresos').textContent    = formatPeso(totalV);
-  document.getElementById('caja-gastos-total').textContent = formatPeso(totalG);
-  document.getElementById('caja-saldo-total').textContent  = formatPeso(totalV - totalG);
-
-  // Detalle ventas
-  const dv = document.getElementById('caja-ventas-detalle');
-  dv.innerHTML = ventas.length
-    ? ventas.map(v => `<div class="dash-list-item"><span>${v.notas || 'Venta'}</span><span>${formatPeso(v.total)}</span></div>`).join('')
-    : '<div class="list-empty">Sin ventas</div>';
-
-  // Detalle gastos
-  const dg = document.getElementById('caja-gastos-detalle');
-  dg.innerHTML = gastos.length
-    ? gastos.map(g => `<div class="dash-list-item"><span>${g.descripcion || g.tipo}</span><span>${formatPeso(g.monto)}</span></div>`).join('')
-    : '<div class="list-empty">Sin gastos</div>';
+    const dg = document.getElementById('caja-gastos-detalle');
+    dg.innerHTML = gastos.length
+      ? gastos.map(g => `
+          <div class="dash-list-item">
+            <span>${g.descripcion || g.tipo}</span>
+            <span style="font-weight:700;color:var(--coral)">${formatPeso(g.monto)}</span>
+          </div>`).join('')
+      : '<div class="list-empty">Sin gastos</div>';
+  } finally {
+    setLoading('caja', false);
+  }
 }
 
-// ── NOVEDADES ─────────────────────────────────────────────────
-async function cargarNovedades() {
-  const res = await apiGet({ action: 'getAll', hoja: 'novedades', token });
-  const lista = res.data || [];
-  const grid = document.getElementById('novedades-grid');
-  if (!lista.length) {
-    grid.innerHTML = '<div class="list-empty" style="grid-column:1/-1;padding:2rem">Sin novedades cargadas</div>';
-    return;
-  }
-  grid.innerHTML = lista.map(n => `
-    <div class="prod-card">
-      ${n.foto
-        ? `<div class="prod-card-img"><img src="${n.foto}" alt="${n.titulo}" loading="lazy" /></div>`
-        : `<div class="prod-card-img">📢</div>`}
-      <div class="prod-card-body">
-        <div class="prod-card-nombre">${n.titulo || ''}</div>
-        <div class="prod-card-variante">${n.descripcion || ''}</div>
-        <label class="toggle-wrap" style="margin-top:6px">
-          <input type="checkbox" ${n.publico === 'true' || n.publico === true ? 'checked' : ''}
-            onchange="togglePublicoNovedad('${n.id}', this.checked)" />
-          <span class="toggle-track"></span>
-          <span class="toggle-label" style="font-size:11px">Visible</span>
-        </label>
+async function cerrarCaja() {
+  const fecha  = document.getElementById('caja-fecha').value || fechaHoy();
+  const totalV = document.getElementById('caja-ingresos').textContent;
+  const totalG = document.getElementById('caja-gastos-total').textContent;
+  const saldo  = document.getElementById('caja-saldo-total').textContent;
+
+  abrirModal('Cerrar caja', `
+    <p style="color:var(--text-secondary);margin-bottom:1rem">
+      Vas a guardar el resumen del día <strong style="color:var(--text-primary)">${fecha}</strong>
+      en la hoja Caja.
+    </p>
+    <div style="background:var(--bg-elevated);border-radius:var(--radius-sm);padding:1rem;display:flex;flex-direction:column;gap:6px">
+      <div class="dash-list-item" style="padding:.3rem 0;border:none">
+        <span>Ingresos</span><span style="color:var(--verde);font-weight:700">${totalV}</span>
       </div>
-      <div class="prod-card-footer">
-        <button class="btn-icon" onclick="subirFotoNovedad('${n.id}')" title="Foto">🖼</button>
-        <button class="btn-icon danger" onclick="eliminarNovedad('${n.id}','${n.foto || ''}')">✕</button>
+      <div class="dash-list-item" style="padding:.3rem 0;border:none">
+        <span>Gastos</span><span style="color:var(--coral);font-weight:700">${totalG}</span>
+      </div>
+      <div class="dash-list-item" style="padding:.3rem 0;border:none;border-top:1px solid var(--border);margin-top:4px">
+        <span style="font-weight:700">Saldo</span>
+        <span style="font-weight:800;font-size:16px">${saldo}</span>
       </div>
     </div>
-  `).join('');
+    <div class="field" style="margin-top:.8rem">
+      <label>Notas del día (opcional)</label>
+      <input type="text" id="caja-notas" class="input-text" placeholder="Ej: feria, día lento..." />
+    </div>
+  `, `
+    <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+    <button class="btn-primary" onclick="confirmarCierreCaja('${fecha}')">Confirmar cierre</button>
+  `);
+}
+
+async function confirmarCierreCaja(fecha) {
+  const btn = document.querySelector('#modal-footer .btn-primary');
+  btn.textContent = 'Guardando...';
+  btn.disabled = true;
+  try {
+    const totalV = Number(document.getElementById('caja-ingresos').textContent.replace(/[^0-9,-]/g, '').replace(',', '.')) || 0;
+    const totalG = Number(document.getElementById('caja-gastos-total').textContent.replace(/[^0-9,-]/g, '').replace(',', '.')) || 0;
+    const fila = {
+      id:          'CAJ-' + Date.now(),
+      fecha,
+      totalVentas: document.getElementById('caja-ingresos').textContent,
+      totalGastos: document.getElementById('caja-gastos-total').textContent,
+      saldo:       document.getElementById('caja-saldo-total').textContent,
+      notas:       document.getElementById('caja-notas').value
+    };
+    const res = await apiPost({ action: 'guardar', hoja: 'caja', fila });
+    if (res.ok) { cerrarModal(); toast('Caja cerrada y guardada'); }
+    else toast(res.error || 'Error', 'error');
+  } finally {
+    btn.textContent = 'Confirmar cierre';
+    btn.disabled = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  NOVEDADES
+// ══════════════════════════════════════════════════════════════
+async function cargarNovedades() {
+  setLoading('novedades', true);
+  try {
+    const res   = await apiGet({ action: 'getAll', hoja: 'novedades', token });
+    const lista = res.data || [];
+    const grid  = document.getElementById('novedades-grid');
+    if (!lista.length) {
+      grid.innerHTML = '<div class="list-empty" style="grid-column:1/-1;padding:2rem">Sin novedades cargadas</div>';
+      return;
+    }
+    grid.innerHTML = lista.map(n => `
+      <div class="prod-card">
+        <div class="prod-card-img" style="cursor:default">
+          ${n.foto ? `<img src="${n.foto}" alt="${n.titulo}" loading="lazy" />` : '📢'}
+        </div>
+        <div class="prod-card-body">
+          <div class="prod-card-nombre">${n.titulo || ''}</div>
+          <div class="prod-card-variante">${n.descripcion || ''}</div>
+          <label class="toggle-wrap" style="margin-top:6px">
+            <input type="checkbox"
+              ${n.publico === 'true' || n.publico === true ? 'checked' : ''}
+              onchange="togglePublicoNovedad('${n.id}', this.checked)" />
+            <span class="toggle-track"></span>
+            <span class="toggle-label" style="font-size:11px">Visible</span>
+          </label>
+        </div>
+        <div class="prod-card-footer">
+          <button class="btn-icon" onclick="subirFotoNovedad('${n.id}')" title="Foto">🖼</button>
+          <button class="btn-icon danger"
+            onclick="confirmarEliminar('novedades','${n.id}','${n.foto || ''}','novedad')">✕</button>
+        </div>
+      </div>`).join('');
+  } finally {
+    setLoading('novedades', false);
+  }
 }
 
 function modalNuevaNovedad() {
@@ -1131,24 +1196,48 @@ async function togglePublicoNovedad(id, publico) {
 function subirFotoNovedad(id) {
   abrirModal('Subir foto de novedad', `
     <div class="foto-upload-area">
-      <input type="file" id="foto-input" accept="image/*" onchange="previsualizarFoto(this)" />
+      <input type="file" id="foto-input-nov" accept="image/*"
+        onchange="previsualizarFotoNov(this)" />
       <div class="foto-upload-icon">🖼</div>
       <div class="foto-upload-text">Hacé clic o arrastrá una imagen</div>
     </div>
-    <img id="foto-preview-img" class="foto-preview hidden" alt="preview" />
+    <img id="foto-preview-nov" class="foto-preview hidden" alt="preview" />
   `, `
     <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-    <button class="btn-primary" onclick="confirmarSubidaFoto('${id}','novedades','novedades')">Subir</button>
+    <button class="btn-primary" onclick="confirmarSubidaFotoNov('${id}')">Subir</button>
   `);
 }
 
-async function eliminarNovedad(id, fotoUrl) {
-  const res = await apiPost({ action: 'eliminarConFoto', hoja: 'novedades', id, fotoUrl });
-  if (res.ok) { toast('Novedad eliminada'); await cargarNovedades(); }
-  else toast(res.error || 'Error', 'error');
+function previsualizarFotoNov(input) {
+  const file    = input.files[0];
+  const preview = document.getElementById('foto-preview-nov');
+  if (!file || !preview) return;
+  if (file.type.startsWith('image/')) {
+    preview.src = URL.createObjectURL(file);
+    preview.classList.remove('hidden');
+  }
 }
 
-// ── CONFIG ────────────────────────────────────────────────────
+async function confirmarSubidaFotoNov(id) {
+  const input = document.getElementById('foto-input-nov');
+  if (!input?.files[0]) { toast('Seleccioná un archivo', 'error'); return; }
+  const btn = document.querySelector('#modal-footer .btn-primary');
+  btn.textContent = 'Subiendo...';
+  btn.disabled = true;
+  try {
+    const b64 = await comprimirImagen(input.files[0]);
+    const res = await apiPost({ action: 'subirFoto', hoja: 'novedades', id, b64, nombre: id, categoria: 'novedades' });
+    if (res.ok) { cerrarModal(); toast('Foto subida'); await cargarNovedades(); }
+    else toast(res.error || 'Error al subir', 'error');
+  } finally {
+    btn.textContent = 'Subir';
+    btn.disabled = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════════════════════
 async function cargarConfig() {
   const res = await apiGet({ action: 'getConfig' });
   const cfg = res.data || {};
@@ -1162,20 +1251,18 @@ async function cargarConfig() {
 
 async function guardarConfig() {
   const campos = [
-    { campo: 'nombreNegocio', val: document.getElementById('cfg-nombre').value },
-    { campo: 'whatsapp',      val: document.getElementById('cfg-whatsapp').value },
-    { campo: 'facebook',      val: document.getElementById('cfg-facebook').value },
-    { campo: 'linkMP',        val: document.getElementById('cfg-mp').value },
-    { campo: 'stockMinAlerta',val: document.getElementById('cfg-stock-min').value }
+    { clave: 'nombreNegocio', valor: document.getElementById('cfg-nombre').value },
+    { clave: 'whatsapp',      valor: document.getElementById('cfg-whatsapp').value },
+    { clave: 'facebook',      valor: document.getElementById('cfg-facebook').value },
+    { clave: 'linkMP',        valor: document.getElementById('cfg-mp').value },
+    { clave: 'stockMinAlerta',valor: document.getElementById('cfg-stock-min').value }
   ];
-
   const btn = document.getElementById('btn-guardar-config');
   btn.textContent = 'Guardando...';
   btn.disabled = true;
-
   try {
     for (const c of campos) {
-      await apiPost({ action: 'guardarConfig', clave: c.campo, valor: c.val });
+      await apiPost({ action: 'guardarConfig', clave: c.clave, valor: c.valor });
     }
     localStorage.setItem('tcd_stock_min', document.getElementById('cfg-stock-min').value);
     toast('Configuración guardada');
@@ -1185,43 +1272,38 @@ async function guardarConfig() {
   }
 }
 
-// ── INIT ──────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
   initTema();
 
-  // Login
   document.getElementById('btn-login').addEventListener('click', login);
   document.getElementById('login-pass').addEventListener('keydown', e => {
     if (e.key === 'Enter') login();
   });
 
-  // Modal cerrar
   document.getElementById('modal-close').addEventListener('click', cerrarModal);
   document.getElementById('modal-overlay').addEventListener('click', e => {
     if (e.target === document.getElementById('modal-overlay')) cerrarModal();
   });
 
-  // Menú mobile
   document.getElementById('btn-menu').addEventListener('click', () => {
     document.getElementById('sidebar')?.classList.toggle('open');
   });
 
-  // Botones de sección
   document.getElementById('btn-nuevo-producto')?.addEventListener('click', () => modalProducto());
   document.getElementById('btn-nuevo-inventario')?.addEventListener('click', modalNuevoInventario);
   document.getElementById('btn-nueva-venta')?.addEventListener('click', modalNuevaVenta);
   document.getElementById('btn-nuevo-gasto')?.addEventListener('click', modalNuevoGasto);
   document.getElementById('btn-nueva-novedad')?.addEventListener('click', modalNuevaNovedad);
   document.getElementById('btn-guardar-config')?.addEventListener('click', guardarConfig);
+  document.getElementById('btn-caja-cerrar')?.addEventListener('click', cerrarCaja);
 
-  // Filtros con fecha
   document.getElementById('ventas-fecha')?.addEventListener('change', cargarVentas);
   document.getElementById('gastos-fecha')?.addEventListener('change', cargarGastos);
   document.getElementById('caja-fecha')?.addEventListener('change', cargarCaja);
 
-  // Si hay token guardado, intentar restaurar sesión
   if (token) mostrarApp();
-
-  // Bindear nav (ya fue construido por nav.js)
   bindNav();
 });

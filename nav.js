@@ -12,7 +12,7 @@
       <header class="header">
         <div class="container header-inner">
           <a href="#inicio" class="header-logo">
-            <span class="header-logo-icon">✦</span>
+            <img src="assets/logo.png" alt="Tu Casa de Detalles" class="header-logo-img" />
             <span class="header-logo-text">Tu Casa de Detalles</span>
           </a>
 

@@ -483,6 +483,12 @@ function modalProducto(prod = null) {
       ${prod?.foto
         ? `<img src="${prod.foto}" class="foto-preview" alt="foto actual" />`
         : '<img id="foto-preview-prod" class="foto-preview hidden" alt="preview" />'}
+      <button class="btn-gemini" type="button" id="btn-gemini-foto"
+        onclick="analizarFotoConGemini()"
+        style="margin-top:8px;width:100%">
+        ✦ Analizar foto con Gemini
+      </button>
+      <div id="gemini-foto-estado" style="font-size:12px;color:var(--text-muted);margin-top:4px;text-align:center"></div>
     </div>
   `, `
     <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
@@ -507,6 +513,56 @@ function previsualizarFotoProd(input) {
   if (preview) {
     preview.src = URL.createObjectURL(file);
     preview.classList.remove('hidden');
+  }
+}
+
+async function analizarFotoConGemini() {
+  const input  = document.getElementById('foto-input-prod');
+  const estado = document.getElementById('gemini-foto-estado');
+  const btn    = document.getElementById('btn-gemini-foto');
+
+  if (!input?.files[0]) {
+    toast('Primero seleccioná una foto', 'error'); return;
+  }
+
+  const categoria = document.getElementById('mp-cat')?.value || '';
+
+  btn.textContent = '...analizando';
+  btn.disabled    = true;
+  if (estado) estado.textContent = 'Gemini está analizando la imagen...';
+
+  try {
+    const b64 = await comprimirImagen(input.files[0]);
+    const res = await apiPost({ action: 'geminiAnalizarFoto', b64, categoria });
+
+    if (res.ok) {
+      // Completar campos solo si están vacíos
+      const campNombre = document.getElementById('mp-nombre');
+      const campDesc   = document.getElementById('mp-descripcion');
+      const campVar    = document.getElementById('mp-variante');
+
+      if (campNombre && !campNombre.value && res.nombre)
+        campNombre.value = res.nombre;
+      if (campDesc && !campDesc.value && res.descripcion)
+        campDesc.value = res.descripcion;
+      if (campVar && !campVar.value && res.variante)
+        campVar.value = res.variante;
+
+      // Si el nombre/cat cambiaron actualizar código
+      await actualizarCodigoProd();
+
+      if (estado) estado.textContent = '✓ Gemini completó nombre, descripción y variante';
+      toast('Foto analizada con Gemini');
+    } else {
+      if (estado) estado.textContent = res.error || 'Error al analizar';
+      toast(res.error || 'Gemini no pudo analizar la foto', 'error');
+    }
+  } catch(e) {
+    if (estado) estado.textContent = 'Error de conexión';
+    toast('Error al analizar', 'error');
+  } finally {
+    btn.textContent = '✦ Analizar foto con Gemini';
+    btn.disabled    = false;
   }
 }
 

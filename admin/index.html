@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Tu Casa de Detalles</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="theme-dark">
+
+  <!-- ═══════════════════════════════════════════
+       LOGIN
+  ═══════════════════════════════════════════ -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <div class="login-logo">
+        <span class="login-logo-icon">✦</span>
+        <span class="login-logo-text">Tu Casa de Detalles</span>
+      </div>
+      <p class="login-sub">Panel de administración</p>
+      <div class="field">
+        <label>Usuario</label>
+        <input type="text" id="login-user" placeholder="tucasadedetalles" autocomplete="username" />
+      </div>
+      <div class="field">
+        <label>Contraseña</label>
+        <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button class="btn-primary btn-full" id="btn-login">Ingresar</button>
+      <div id="login-error" class="login-error hidden"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       APP
+  ═══════════════════════════════════════════ -->
+  <div id="app" class="app hidden">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-logo-icon">✦</span>
+        <span class="sidebar-logo-text">TCD</span>
+        <button class="sidebar-close" id="btn-sidebar-close">✕</button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="nav-item active" data-section="dashboard">
+          <span class="nav-icon">⊞</span>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a class="nav-item" data-section="productos">
+          <span class="nav-icon">◈</span>
+          <span class="nav-label">Productos</span>
+        </a>
+        <a class="nav-item" data-section="inventarios">
+          <span class="nav-icon">▦</span>
+          <span class="nav-label">Inventarios</span>
+        </a>
+        <a class="nav-item" data-section="ventas">
+          <span class="nav-icon">◎</span>
+          <span class="nav-label">Ventas</span>
+        </a>
+        <a class="nav-item" data-section="gastos">
+          <span class="nav-icon">◐</span>
+          <span class="nav-label">Gastos</span>
+        </a>
+        <a class="nav-item" data-section="caja">
+          <span class="nav-icon">▣</span>
+          <span class="nav-label">Caja diaria</span>
+        </a>
+        <a class="nav-item" data-section="novedades">
+          <span class="nav-icon">◆</span>
+          <span class="nav-label">Novedades</span>
+        </a>
+        <a class="nav-item" data-section="config">
+          <span class="nav-icon">◉</span>
+          <span class="nav-label">Configuración</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn-theme" id="btn-theme" title="Cambiar tema">
+          <span id="theme-icon">☀</span>
+        </button>
+        <button class="btn-logout" id="btn-logout">Salir</button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main-wrap">
+
+      <!-- TOPBAR -->
+      <header class="topbar">
+        <button class="btn-menu" id="btn-menu">☰</button>
+        <div class="topbar-title" id="topbar-title">Dashboard</div>
+        <div class="topbar-actions" id="topbar-actions"></div>
+      </header>
+
+      <!-- CONTENT -->
+      <main class="content" id="content">
+
+        <!-- ── DASHBOARD ── -->
+        <section id="sec-dashboard" class="section active">
+          <div class="stats-grid">
+            <div class="stat-card accent-green">
+              <div class="stat-label">Ventas hoy</div>
+              <div class="stat-value" id="stat-ventas-hoy">$0</div>
+              <div class="stat-sub" id="stat-ventas-cant">0 transacciones</div>
+            </div>
+            <div class="stat-card accent-coral">
+              <div class="stat-label">Gastos del mes</div>
+              <div class="stat-value" id="stat-gastos-mes">$0</div>
+              <div class="stat-sub">compras + packaging</div>
+            </div>
+            <div class="stat-card accent-bordo">
+              <div class="stat-label">Saldo del día</div>
+              <div class="stat-value" id="stat-saldo">$0</div>
+              <div class="stat-sub">ingresos - egresos</div>
+            </div>
+            <div class="stat-card accent-yellow">
+              <div class="stat-label">Stock bajo</div>
+              <div class="stat-value" id="stat-stock-bajo">0</div>
+              <div class="stat-sub">productos a reponer</div>
+            </div>
+          </div>
+
+          <div class="dashboard-cols">
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title">Últimas ventas</span>
+                <a class="panel-link" data-section="ventas">Ver todas</a>
+              </div>
+              <div id="dash-ventas-lista" class="list-empty">Sin ventas registradas hoy</div>
+            </div>
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title">Stock bajo</span>
+                <a class="panel-link" data-section="productos">Ver todos</a>
+              </div>
+              <div id="dash-stock-lista" class="list-empty">Todo el stock está bien</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ── PRODUCTOS ── -->
+        <section id="sec-productos" class="section">
+          <div class="section-toolbar">
+            <div class="search-wrap">
+              <input type="text" id="prod-search" class="input-search" placeholder="Buscar producto..." />
+            </div>
+            <div class="filter-wrap">
+              <select id="prod-filter-cat" class="input-select">
+                <option value="">Todas las categorías</option>
+                <option>Accesorios Pelo</option>
+                <option>Accesorios Invierno</option>
+                <option>Morrales</option>
+                <option>Libreria</option>
+                <option>Llaveros</option>
+                <option>Cuidado Personal</option>
+                <option>Otros</option>
+              </select>
+            </div>
+            <button class="btn-primary" id="btn-nuevo-producto">+ Nuevo producto</button>
+          </div>
+          <div id="productos-grid" class="productos-grid"></div>
+        </section>
+
+        <!-- ── INVENTARIOS ── -->
+        <section id="sec-inventarios" class="section">
+          <div class="section-toolbar">
+            <button class="btn-primary" id="btn-nuevo-inventario">+ Nuevo inventario</button>
+          </div>
+          <div id="inventarios-lista" class="inventarios-lista"></div>
+        </section>
+
+        <!-- ── VENTAS ── -->
+        <section id="sec-ventas" class="section">
+          <div class="section-toolbar">
+            <input type="date" id="ventas-fecha" class="input-date" />
+            <button class="btn-primary" id="btn-nueva-venta">+ Registrar venta</button>
+          </div>
+          <div id="ventas-tabla" class="tabla-wrap"></div>
+        </section>
+
+        <!-- ── GASTOS ── -->
+        <section id="sec-gastos" class="section">
+          <div class="section-toolbar">
+            <input type="date" id="gastos-fecha" class="input-date" />
+            <button class="btn-primary" id="btn-nuevo-gasto">+ Registrar gasto</button>
+          </div>
+          <div id="gastos-tabla" class="tabla-wrap"></div>
+        </section>
+
+        <!-- ── CAJA ── -->
+        <section id="sec-caja" class="section">
+          <div class="caja-header">
+            <input type="date" id="caja-fecha" class="input-date" />
+            <button class="btn-secondary" id="btn-caja-cerrar">Cerrar caja</button>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-card accent-green">
+              <div class="stat-label">Total ingresos</div>
+              <div class="stat-value" id="caja-ingresos">$0</div>
+            </div>
+            <div class="stat-card accent-coral">
+              <div class="stat-label">Total gastos</div>
+              <div class="stat-value" id="caja-gastos-total">$0</div>
+            </div>
+            <div class="stat-card accent-bordo">
+              <div class="stat-label">Saldo</div>
+              <div class="stat-value" id="caja-saldo-total">$0</div>
+            </div>
+          </div>
+          <div class="dashboard-cols">
+            <div class="panel">
+              <div class="panel-header"><span class="panel-title">Ventas del día</span></div>
+              <div id="caja-ventas-detalle" class="list-empty">Sin datos</div>
+            </div>
+            <div class="panel">
+              <div class="panel-header"><span class="panel-title">Gastos del día</span></div>
+              <div id="caja-gastos-detalle" class="list-empty">Sin datos</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ── NOVEDADES ── -->
+        <section id="sec-novedades" class="section">
+          <div class="section-toolbar">
+            <button class="btn-primary" id="btn-nueva-novedad">+ Nueva novedad</button>
+          </div>
+          <div id="novedades-grid" class="productos-grid"></div>
+        </section>
+
+        <!-- ── CONFIG ── -->
+        <section id="sec-config" class="section">
+          <div class="config-grid">
+            <div class="panel">
+              <div class="panel-header"><span class="panel-title">Datos del negocio</span></div>
+              <div class="config-form">
+                <div class="field">
+                  <label>Nombre del negocio</label>
+                  <input type="text" id="cfg-nombre" class="input-text" />
+                </div>
+                <div class="field">
+                  <label>WhatsApp</label>
+                  <input type="text" id="cfg-whatsapp" class="input-text" placeholder="5491167682727" />
+                </div>
+                <div class="field">
+                  <label>Facebook</label>
+                  <input type="text" id="cfg-facebook" class="input-text" placeholder="URL de tu página" />
+                </div>
+                <div class="field">
+                  <label>Link MercadoPago</label>
+                  <input type="text" id="cfg-mp" class="input-text" placeholder="https://mpago.la/..." />
+                </div>
+                <div class="field">
+                  <label>Alerta stock mínimo (unidades)</label>
+                  <input type="number" id="cfg-stock-min" class="input-text" min="1" />
+                </div>
+                <button class="btn-primary" id="btn-guardar-config">Guardar cambios</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       MODAL GENÉRICO
+  ═══════════════════════════════════════════ -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <span class="modal-title" id="modal-title">Modal</span>
+        <button class="modal-close" id="modal-close">✕</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-footer" id="modal-footer"></div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>

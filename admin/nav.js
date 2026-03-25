@@ -31,7 +31,7 @@
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
           <img src="../assets/logo.png" alt="Logo" class="sidebar-logo-img" />
-          <span class="sidebar-logo-text">TCD</span>
+          <span class="sidebar-logo-text">Admin</span>
           <button class="sidebar-close" id="btn-sidebar-close">✕</button>
         </div>
 

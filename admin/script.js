@@ -163,13 +163,33 @@ function bindNav() {
 
   if (btnTheme)  btnTheme.addEventListener('click', toggleTema);
   if (btnLogout) btnLogout.addEventListener('click', logout);
-  if (btnClose)  btnClose.addEventListener('click', () => {
-    document.getElementById('sidebar')?.classList.remove('open');
-  });
+  if (btnClose)  btnClose.addEventListener('click', cerrarSidebar);
+
+  // Overlay invisible — click fuera cierra la sidebar en mobile
+  let overlay = document.getElementById('sidebar-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'sidebar-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99;display:none;';
+    overlay.addEventListener('click', cerrarSidebar);
+    document.body.appendChild(overlay);
+  }
 
   const tema = localStorage.getItem('tcd_tema') || 'dark';
   const icon = document.getElementById('theme-icon');
   if (icon) icon.textContent = tema === 'dark' ? '☀' : '☾';
+}
+
+function cerrarSidebar() {
+  document.getElementById('sidebar')?.classList.remove('open');
+  const ov = document.getElementById('sidebar-overlay');
+  if (ov) ov.style.display = 'none';
+}
+
+function abrirSidebar() {
+  document.getElementById('sidebar')?.classList.add('open');
+  const ov = document.getElementById('sidebar-overlay');
+  if (ov) ov.style.display = 'block';
 }
 
 function navegarA(seccion) {
@@ -182,10 +202,10 @@ function navegarA(seccion) {
   const labels = {
     dashboard:'Dashboard', productos:'Productos', inventarios:'Inventarios',
     ventas:'Ventas', gastos:'Gastos', caja:'Caja diaria',
-    novedades:'Novedades', calculadora:'Calculadora', config:'Configuración'
+    novedades:'Novedades', fotos:'Fotos', calculadora:'Calculadora', config:'Configuración'
   };
   document.getElementById('topbar-title').textContent = labels[seccion] || seccion;
-  document.getElementById('sidebar')?.classList.remove('open');
+  cerrarSidebar();
   cargarSeccion(seccion);
 }
 
@@ -197,6 +217,7 @@ async function cargarSeccion(seccion) {
   if (seccion === 'gastos')      await cargarGastos();
   if (seccion === 'caja')        await cargarCaja();
   if (seccion === 'novedades')   await cargarNovedades();
+  if (seccion === 'fotos')       await cargarFotos();
   if (seccion === 'config')      await cargarConfig();
   if (seccion === 'calculadora') initCalculadora();
 }
@@ -703,26 +724,67 @@ function modalNuevoItemInventario(hojaId) {
       <label>Notas</label>
       <input type="text" id="ii-notas" class="input-text" />
     </div>
+    <div class="field">
+      <label>Foto (opcional)</label>
+      <div class="foto-upload-area">
+        <input type="file" id="ii-foto" accept="image/*"
+          onchange="previsualizarFotoItem(this)" />
+        <div class="foto-upload-icon">🖼</div>
+        <div class="foto-upload-text">Hacé clic o arrastrá — se convierte a JPG</div>
+      </div>
+      <img id="ii-foto-preview" class="foto-preview hidden" alt="preview" />
+    </div>
   `, `
     <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
     <button class="btn-primary" onclick="guardarItemInventario('${hojaId}')">Guardar</button>
   `);
 }
 
+function previsualizarFotoItem(input) {
+  const file    = input.files[0];
+  const preview = document.getElementById('ii-foto-preview');
+  if (!file || !preview) return;
+  if (file.type.startsWith('image/')) {
+    preview.src = URL.createObjectURL(file);
+    preview.classList.remove('hidden');
+  }
+}
+
 async function guardarItemInventario(hojaId) {
-  const res1 = await apiGet({ action: 'siguienteCodigo', hoja: hojaId });
-  const fila = {
-    id:        'IT-' + Date.now(),
-    codigo:    res1.codigo || '',
-    nombre:    document.getElementById('ii-nombre').value,
-    categoria: document.getElementById('ii-cat').value,
-    cantidad:  document.getElementById('ii-cant').value,
-    notas:     document.getElementById('ii-notas').value,
-    foto: '', visible: 'true', creadoEn: fechaHoy()
-  };
-  const res = await apiPost({ action: 'guardar', hoja: hojaId, fila });
-  if (res.ok) { cerrarModal(); toast('Item guardado'); }
-  else toast(res.error || 'Error', 'error');
+  const btn = document.querySelector('#modal-footer .btn-primary');
+  btn.textContent = 'Guardando...';
+  btn.disabled = true;
+  try {
+    const res1 = await apiGet({ action: 'siguienteCodigo', hoja: hojaId });
+    const id   = 'IT-' + Date.now();
+    let fotoUrl = '';
+
+    const fileInput = document.getElementById('ii-foto');
+    if (fileInput?.files[0]) {
+      const cat  = document.getElementById('ii-cat').value || 'inventario';
+      const b64  = await comprimirImagen(fileInput.files[0]);
+      const resF = await apiPost({ action: 'subirFoto', hoja: hojaId, id, b64, nombre: id, categoria: cat });
+      if (resF.ok) fotoUrl = resF.url;
+    }
+
+    const fila = {
+      id,
+      codigo:    res1.codigo || '',
+      nombre:    document.getElementById('ii-nombre').value,
+      categoria: document.getElementById('ii-cat').value,
+      cantidad:  document.getElementById('ii-cant').value,
+      notas:     document.getElementById('ii-notas').value,
+      foto:      fotoUrl,
+      visible:   'true',
+      creadoEn:  fechaHoy()
+    };
+    const res = await apiPost({ action: 'guardar', hoja: hojaId, fila });
+    if (res.ok) { cerrarModal(); toast('Item guardado'); }
+    else toast(res.error || 'Error', 'error');
+  } finally {
+    btn.textContent = 'Guardar';
+    btn.disabled = false;
+  }
 }
 
 function eliminarInventarioModal(hojaId) {
@@ -1237,6 +1299,154 @@ async function confirmarSubidaFotoNov(id) {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  FOTOS — subida masiva a Drive/Pendientes
+// ══════════════════════════════════════════════════════════════
+let fotosCache = [];
+
+async function cargarFotos() {
+  setLoading('fotos', true);
+  try {
+    const res  = await apiGet({ action: 'getFotosPendientes', token });
+    fotosCache = res.data || [];
+    renderFotos();
+  } catch(e) {
+    console.error('Error cargando fotos:', e);
+  } finally {
+    setLoading('fotos', false);
+  }
+}
+
+function renderFotos() {
+  const grid = document.getElementById('fotos-grid');
+  if (!grid) return;
+
+  if (fotosCache.length === 0) {
+    grid.innerHTML = `
+      <div class="list-empty" style="grid-column:1/-1;padding:3rem;text-align:center">
+        <div style="font-size:36px;margin-bottom:1rem">📂</div>
+        <p>No hay fotos pendientes. Subí fotos con el botón de arriba.</p>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = fotosCache.map(f => `
+    <div class="foto-card">
+      <div class="foto-card-img">
+        <img src="${f.url}" alt="${f.nombre}" loading="lazy" />
+      </div>
+      <div class="foto-card-body">
+        <div class="foto-card-nombre">${f.nombre}</div>
+        <div class="foto-card-acciones">
+          <button class="btn-primary" style="font-size:12px;padding:.35rem .7rem"
+            onclick="modalAsignarFoto('${f.url}','${encodeURIComponent(f.nombre)}')">
+            Asignar
+          </button>
+          <button class="btn-icon danger"
+            onclick="eliminarFotoPendiente('${f.url}')">✕</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function subirFotosPendientes(input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+
+  const label = input.closest('label');
+  const span  = label?.querySelector('span');
+  if (span) span.textContent = `Subiendo 0/${files.length}...`;
+
+  let ok = 0;
+  for (let i = 0; i < files.length; i++) {
+    try {
+      const b64    = await comprimirImagen(files[i]);
+      const nombre = files[i].name.replace(/\.[^.]+$/, '') + '_' + Date.now();
+      const res    = await apiPost({ action: 'subirFotoPendiente', b64, nombre });
+      if (res.ok) ok++;
+      if (span) span.textContent = `Subiendo ${i+1}/${files.length}...`;
+    } catch(e) { console.error('Error subiendo', files[i].name, e); }
+  }
+
+  if (span) span.textContent = '+ Subir fotos';
+  input.value = '';
+  toast(`${ok} foto${ok !== 1 ? 's' : ''} subida${ok !== 1 ? 's' : ''}`);
+  await cargarFotos();
+}
+
+function modalAsignarFoto(fotoUrl, fotoNombreEncoded) {
+  const fotoNombre = decodeURIComponent(fotoNombreEncoded);
+  if (!productosCache.length) {
+    toast('Cargá la sección Productos primero', 'error'); return;
+  }
+  const opts = productosCache.map(p =>
+    `<option value="${p.id}">[${p.codigo||''}] ${p.nombre}${p.variante?' — '+p.variante:''}</option>`
+  ).join('');
+
+  abrirModal('Asignar foto a producto', `
+    <img src="${fotoUrl}"
+      style="width:100%;max-height:200px;object-fit:cover;border-radius:var(--radius-md);margin-bottom:1rem" />
+    <div class="field">
+      <label>Seleccioná el producto</label>
+      <select id="asignar-prod-id" class="input-select">
+        <option value="">— Elegí un producto —</option>
+        ${opts}
+      </select>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:.5rem">
+      La foto se moverá a la carpeta del producto automáticamente.
+    </p>
+  `, `
+    <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+    <button class="btn-primary"
+      onclick="confirmarAsignarFoto('${fotoUrl}','${fotoNombreEncoded}')">Asignar</button>
+  `);
+}
+
+async function confirmarAsignarFoto(fotoUrl, fotoNombreEncoded) {
+  const prodId = document.getElementById('asignar-prod-id').value;
+  if (!prodId) { toast('Seleccioná un producto', 'error'); return; }
+
+  const prod = productosCache.find(p => p.id === prodId);
+  if (!prod)  { toast('Producto no encontrado', 'error'); return; }
+
+  const btn = document.querySelector('#modal-footer .btn-primary');
+  btn.textContent = 'Asignando...';
+  btn.disabled = true;
+
+  try {
+    const res = await apiPost({
+      action:     'asignarFoto',
+      fotoUrl,
+      fotoNombre: decodeURIComponent(fotoNombreEncoded),
+      productoId: prodId,
+      categoria:  prod.categoria || ''
+    });
+    if (res.ok) {
+      cerrarModal();
+      toast('Foto asignada al producto');
+      await Promise.all([cargarFotos(), cargarProductos()]);
+    } else {
+      toast(res.error || 'Error al asignar', 'error');
+    }
+  } finally {
+    btn.textContent = 'Asignar';
+    btn.disabled = false;
+  }
+}
+
+async function eliminarFotoPendiente(fotoUrl) {
+  const res = await apiPost({ action: 'eliminarFotoPendiente', fotoUrl });
+  if (res.ok) {
+    toast('Foto eliminada');
+    fotosCache = fotosCache.filter(f => f.url !== fotoUrl);
+    renderFotos();
+  } else {
+    toast(res.error || 'Error', 'error');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
 //  CALCULADORA
 // ══════════════════════════════════════════════════════════════
 let calcState = { display: '0', expr: '', operand: null, operator: null, newNum: true };
@@ -1399,9 +1609,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === document.getElementById('modal-overlay')) cerrarModal();
   });
 
-  document.getElementById('btn-menu').addEventListener('click', () => {
-    document.getElementById('sidebar')?.classList.toggle('open');
-  });
+  document.getElementById('btn-menu').addEventListener('click', abrirSidebar);
 
   document.getElementById('btn-nuevo-producto')?.addEventListener('click', () => modalProducto());
   document.getElementById('btn-nuevo-inventario')?.addEventListener('click', modalNuevoInventario);

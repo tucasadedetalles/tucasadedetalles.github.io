@@ -1,5 +1,5 @@
 // ============================================================
-//  Tu Casa de Detalles — admin/nav.js v2
+//  Tu Casa de Detalles — admin/nav.js v3
 // ============================================================
 
 (function () {
@@ -11,6 +11,7 @@
     { section: 'gastos',      icon: '◐', label: 'Gastos' },
     { section: 'caja',        icon: '▣', label: 'Caja diaria' },
     { section: 'novedades',   icon: '◆', label: 'Novedades' },
+    { section: 'calculadora', icon: '⊟', label: 'Calculadora' },
     { section: 'config',      icon: '◉', label: 'Configuración' },
   ];
 
@@ -29,7 +30,7 @@
     container.innerHTML = `
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-          <span class="sidebar-logo-icon">✦</span>
+          <img src="../assets/logo.png" alt="Logo" class="sidebar-logo-img" />
           <span class="sidebar-logo-text">TCD</span>
           <button class="sidebar-close" id="btn-sidebar-close">✕</button>
         </div>

@@ -179,6 +179,21 @@
           <div id="novedades-grid" class="productos-grid"></div>
         </section>
 
+        <!-- FOTOS -->
+        <section id="sec-fotos" class="section">
+          <div class="section-toolbar">
+            <label class="btn-primary" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+              <span>+ Subir fotos</span>
+              <input type="file" id="input-fotos" accept="image/*" multiple
+                style="display:none" onchange="subirFotosPendientes(this)" />
+            </label>
+            <span style="font-size:13px;color:var(--text-muted)">
+              Subí varias a la vez — se guardan en Drive/Pendientes
+            </span>
+          </div>
+          <div id="fotos-grid" class="fotos-grid"></div>
+        </section>
+
         <!-- CALCULADORA -->
         <section id="sec-calculadora" class="section">
           <div class="calc-wrap">

@@ -11,6 +11,7 @@
     { section: 'gastos',      icon: '◐', label: 'Gastos' },
     { section: 'caja',        icon: '▣', label: 'Caja diaria' },
     { section: 'novedades',   icon: '◆', label: 'Novedades' },
+    { section: 'fotos',       icon: '🖼', label: 'Fotos' },
     { section: 'calculadora', icon: '⊟', label: 'Calculadora' },
     { section: 'config',      icon: '◉', label: 'Configuración' },
   ];

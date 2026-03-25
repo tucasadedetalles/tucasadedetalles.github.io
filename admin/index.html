@@ -11,9 +11,7 @@
 </head>
 <body class="theme-dark">
 
-  <!-- ═══════════════════════════════════════════
-       LOGIN
-  ═══════════════════════════════════════════ -->
+  <!-- LOGIN -->
   <div id="login-screen" class="login-screen">
     <div class="login-card">
       <div class="login-logo">
@@ -34,61 +32,11 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════
-       APP
-  ═══════════════════════════════════════════ -->
+  <!-- APP -->
   <div id="app" class="app hidden">
 
-    <!-- SIDEBAR -->
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-header">
-        <span class="sidebar-logo-icon">✦</span>
-        <span class="sidebar-logo-text">TCD</span>
-        <button class="sidebar-close" id="btn-sidebar-close">✕</button>
-      </div>
-
-      <nav class="sidebar-nav">
-        <a class="nav-item active" data-section="dashboard">
-          <span class="nav-icon">⊞</span>
-          <span class="nav-label">Dashboard</span>
-        </a>
-        <a class="nav-item" data-section="productos">
-          <span class="nav-icon">◈</span>
-          <span class="nav-label">Productos</span>
-        </a>
-        <a class="nav-item" data-section="inventarios">
-          <span class="nav-icon">▦</span>
-          <span class="nav-label">Inventarios</span>
-        </a>
-        <a class="nav-item" data-section="ventas">
-          <span class="nav-icon">◎</span>
-          <span class="nav-label">Ventas</span>
-        </a>
-        <a class="nav-item" data-section="gastos">
-          <span class="nav-icon">◐</span>
-          <span class="nav-label">Gastos</span>
-        </a>
-        <a class="nav-item" data-section="caja">
-          <span class="nav-icon">▣</span>
-          <span class="nav-label">Caja diaria</span>
-        </a>
-        <a class="nav-item" data-section="novedades">
-          <span class="nav-icon">◆</span>
-          <span class="nav-label">Novedades</span>
-        </a>
-        <a class="nav-item" data-section="config">
-          <span class="nav-icon">◉</span>
-          <span class="nav-label">Configuración</span>
-        </a>
-      </nav>
-
-      <div class="sidebar-footer">
-        <button class="btn-theme" id="btn-theme" title="Cambiar tema">
-          <span id="theme-icon">☀</span>
-        </button>
-        <button class="btn-logout" id="btn-logout">Salir</button>
-      </div>
-    </aside>
+    <!-- SIDEBAR — generada dinámicamente por nav.js -->
+    <div id="sidebar-container"></div>
 
     <!-- MAIN -->
     <div class="main-wrap">
@@ -103,7 +51,7 @@
       <!-- CONTENT -->
       <main class="content" id="content">
 
-        <!-- ── DASHBOARD ── -->
+        <!-- DASHBOARD -->
         <section id="sec-dashboard" class="section active">
           <div class="stats-grid">
             <div class="stat-card accent-green">
@@ -127,7 +75,6 @@
               <div class="stat-sub">productos a reponer</div>
             </div>
           </div>
-
           <div class="dashboard-cols">
             <div class="panel">
               <div class="panel-header">
@@ -146,30 +93,26 @@
           </div>
         </section>
 
-        <!-- ── PRODUCTOS ── -->
+        <!-- PRODUCTOS -->
         <section id="sec-productos" class="section">
           <div class="section-toolbar">
-            <div class="search-wrap">
-              <input type="text" id="prod-search" class="input-search" placeholder="Buscar producto..." />
-            </div>
-            <div class="filter-wrap">
-              <select id="prod-filter-cat" class="input-select">
-                <option value="">Todas las categorías</option>
-                <option>Accesorios Pelo</option>
-                <option>Accesorios Invierno</option>
-                <option>Morrales</option>
-                <option>Libreria</option>
-                <option>Llaveros</option>
-                <option>Cuidado Personal</option>
-                <option>Otros</option>
-              </select>
-            </div>
+            <input type="text" id="prod-search" class="input-search" placeholder="Buscar producto..." />
+            <select id="prod-filter-cat" class="input-select">
+              <option value="">Todas las categorías</option>
+              <option>Accesorios Pelo</option>
+              <option>Accesorios Invierno</option>
+              <option>Morrales</option>
+              <option>Libreria</option>
+              <option>Llaveros</option>
+              <option>Cuidado Personal</option>
+              <option>Otros</option>
+            </select>
             <button class="btn-primary" id="btn-nuevo-producto">+ Nuevo producto</button>
           </div>
           <div id="productos-grid" class="productos-grid"></div>
         </section>
 
-        <!-- ── INVENTARIOS ── -->
+        <!-- INVENTARIOS -->
         <section id="sec-inventarios" class="section">
           <div class="section-toolbar">
             <button class="btn-primary" id="btn-nuevo-inventario">+ Nuevo inventario</button>
@@ -177,7 +120,7 @@
           <div id="inventarios-lista" class="inventarios-lista"></div>
         </section>
 
-        <!-- ── VENTAS ── -->
+        <!-- VENTAS -->
         <section id="sec-ventas" class="section">
           <div class="section-toolbar">
             <input type="date" id="ventas-fecha" class="input-date" />
@@ -186,7 +129,7 @@
           <div id="ventas-tabla" class="tabla-wrap"></div>
         </section>
 
-        <!-- ── GASTOS ── -->
+        <!-- GASTOS -->
         <section id="sec-gastos" class="section">
           <div class="section-toolbar">
             <input type="date" id="gastos-fecha" class="input-date" />
@@ -195,7 +138,7 @@
           <div id="gastos-tabla" class="tabla-wrap"></div>
         </section>
 
-        <!-- ── CAJA ── -->
+        <!-- CAJA -->
         <section id="sec-caja" class="section">
           <div class="caja-header">
             <input type="date" id="caja-fecha" class="input-date" />
@@ -227,7 +170,7 @@
           </div>
         </section>
 
-        <!-- ── NOVEDADES ── -->
+        <!-- NOVEDADES -->
         <section id="sec-novedades" class="section">
           <div class="section-toolbar">
             <button class="btn-primary" id="btn-nueva-novedad">+ Nueva novedad</button>
@@ -235,7 +178,7 @@
           <div id="novedades-grid" class="productos-grid"></div>
         </section>
 
-        <!-- ── CONFIG ── -->
+        <!-- CONFIG -->
         <section id="sec-config" class="section">
           <div class="config-grid">
             <div class="panel">
@@ -271,9 +214,7 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════
-       MODAL GENÉRICO
-  ═══════════════════════════════════════════ -->
+  <!-- MODAL GENÉRICO -->
   <div id="modal-overlay" class="modal-overlay hidden">
     <div class="modal" id="modal">
       <div class="modal-header">
@@ -288,6 +229,8 @@
   <!-- TOAST -->
   <div id="toast" class="toast hidden"></div>
 
+  <!-- nav primero, luego lógica -->
+  <script src="nav.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

@@ -265,7 +265,7 @@ input, select, textarea { font-family: var(--font-main); }
 /* ── Sidebar ────────────────────────────────────────────── */
 .sidebar {
   width: 220px;
-  min-height: 100vh;
+  height: 100vh;
   background: var(--sidebar-bg);
   display: flex;
   flex-direction: column;
@@ -274,6 +274,7 @@ input, select, textarea { font-family: var(--font-main); }
   left: 0; top: 0; bottom: 0;
   z-index: 100;
   transition: transform var(--transition);
+  overflow: hidden;
 }
 
 .sidebar-header {
@@ -309,7 +310,13 @@ input, select, textarea { font-family: var(--font-main); }
   display: flex;
   flex-direction: column;
   gap: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
+
+.sidebar-nav::-webkit-scrollbar { width: 3px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
 
 .nav-item {
   display: flex;
@@ -338,6 +345,7 @@ input, select, textarea { font-family: var(--font-main); }
   padding: 0.5rem 0;
   border-top: 1px solid rgba(255,255,255,0.06);
   border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
 }
 
 .btn-ver-tienda {
@@ -366,6 +374,7 @@ input, select, textarea { font-family: var(--font-main); }
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .btn-theme {

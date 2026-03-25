@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin — Tu Casa de Detalles</title>
+  <link rel="icon" type="image/png" href="../assets/logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
@@ -15,7 +16,7 @@
   <div id="login-screen" class="login-screen">
     <div class="login-card">
       <div class="login-logo">
-        <span class="login-logo-icon">✦</span>
+        <img src="../assets/logo.png" alt="Tu Casa de Detalles" class="login-logo-img" />
         <span class="login-logo-text">Tu Casa de Detalles</span>
       </div>
       <p class="login-sub">Panel de administración</p>
@@ -176,6 +177,86 @@
             <button class="btn-primary" id="btn-nueva-novedad">+ Nueva novedad</button>
           </div>
           <div id="novedades-grid" class="productos-grid"></div>
+        </section>
+
+        <!-- CALCULADORA -->
+        <section id="sec-calculadora" class="section">
+          <div class="calc-wrap">
+
+            <!-- Calculadora básica -->
+            <div class="panel calc-panel">
+              <div class="panel-header"><span class="panel-title">Calculadora</span></div>
+              <div class="calc-display" id="calc-display">0</div>
+              <div class="calc-expr" id="calc-expr"></div>
+              <div class="calc-grid">
+                <button class="calc-btn calc-fn" onclick="calcInput('AC')">AC</button>
+                <button class="calc-btn calc-fn" onclick="calcInput('+/-')">+/-</button>
+                <button class="calc-btn calc-fn" onclick="calcInput('%')">%</button>
+                <button class="calc-btn calc-op" onclick="calcInput('÷')">÷</button>
+
+                <button class="calc-btn" onclick="calcInput('7')">7</button>
+                <button class="calc-btn" onclick="calcInput('8')">8</button>
+                <button class="calc-btn" onclick="calcInput('9')">9</button>
+                <button class="calc-btn calc-op" onclick="calcInput('×')">×</button>
+
+                <button class="calc-btn" onclick="calcInput('4')">4</button>
+                <button class="calc-btn" onclick="calcInput('5')">5</button>
+                <button class="calc-btn" onclick="calcInput('6')">6</button>
+                <button class="calc-btn calc-op" onclick="calcInput('−')">−</button>
+
+                <button class="calc-btn" onclick="calcInput('1')">1</button>
+                <button class="calc-btn" onclick="calcInput('2')">2</button>
+                <button class="calc-btn" onclick="calcInput('3')">3</button>
+                <button class="calc-btn calc-op" onclick="calcInput('+')">+</button>
+
+                <button class="calc-btn calc-zero" onclick="calcInput('0')">0</button>
+                <button class="calc-btn" onclick="calcInput('.')">.</button>
+                <button class="calc-btn calc-equal" onclick="calcInput('=')">=</button>
+              </div>
+            </div>
+
+            <!-- Herramientas de negocio -->
+            <div class="panel">
+              <div class="panel-header"><span class="panel-title">Herramientas</span></div>
+              <div class="calc-tools">
+
+                <div class="calc-tool">
+                  <div class="calc-tool-title">Precio de venta (margen %)</div>
+                  <div class="calc-tool-row">
+                    <input type="number" id="mg-costo" class="input-text" placeholder="Costo $" />
+                    <span class="calc-tool-sep">+</span>
+                    <input type="number" id="mg-margen" class="input-text" placeholder="Margen %" />
+                    <button class="btn-primary" onclick="calcMargen()">=</button>
+                  </div>
+                  <div class="calc-tool-result" id="mg-result"></div>
+                </div>
+
+                <div class="calc-tool">
+                  <div class="calc-tool-title">Precio con descuento</div>
+                  <div class="calc-tool-row">
+                    <input type="number" id="dc-precio" class="input-text" placeholder="Precio $" />
+                    <span class="calc-tool-sep">−</span>
+                    <input type="number" id="dc-desc" class="input-text" placeholder="Descuento %" />
+                    <button class="btn-primary" onclick="calcDescuento()">=</button>
+                  </div>
+                  <div class="calc-tool-result" id="dc-result"></div>
+                </div>
+
+                <div class="calc-tool">
+                  <div class="calc-tool-title">Ganancia sobre venta</div>
+                  <div class="calc-tool-row">
+                    <input type="number" id="gn-venta" class="input-text" placeholder="Venta $" />
+                    <span class="calc-tool-sep">−</span>
+                    <input type="number" id="gn-costo" class="input-text" placeholder="Costo $" />
+                    <button class="btn-primary" onclick="calcGanancia()">=</button>
+                  </div>
+                  <div class="calc-tool-result" id="gn-result"></div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
         </section>
 
         <!-- CONFIG -->

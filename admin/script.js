@@ -110,6 +110,24 @@ function fechaHoy() {
   return new Date().toISOString().split('T')[0];
 }
 
+function normalizarFecha(f) {
+  if (!f) return '';
+  // Si es Date object de Sheets o string con hora, extraer solo YYYY-MM-DD
+  const s = String(f);
+  // Formato ISO: 2026-03-26T00:00:00.000Z
+  if (s.includes('T')) return s.split('T')[0];
+  // Formato con espacio: 2026-03-26 00:00:00
+  if (s.includes(' ') && s.match(/^\d{4}-\d{2}-\d{2}/)) return s.substring(0, 10);
+  // Ya es YYYY-MM-DD
+  if (s.match(/^\d{4}-\d{2}-\d{2}$/)) return s;
+  // Fecha de Excel como número (días desde 1900)
+  if (s.match(/^\d+$/)) {
+    const d = new Date(Math.round((parseInt(s) - 25569) * 86400 * 1000));
+    return d.toISOString().split('T')[0];
+  }
+  return s.substring(0, 10);
+}
+
 function horaAhora() {
   return new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 }
@@ -291,10 +309,10 @@ async function cargarDashboard() {
     const hoy       = fechaHoy();
     const mesActual = hoy.substring(0, 7);
 
-    const ventasHoy = ventas.filter(v => v.fecha === hoy);
+    const ventasHoy = ventas.filter(v => normalizarFecha(v.fecha) === hoy);
     const totalHoy  = ventasHoy.reduce((s, v) => s + Number(v.total || 0), 0);
     const gastosMes = gastos
-      .filter(g => String(g.fecha || '').startsWith(mesActual))
+      .filter(g => normalizarFecha(String(g.fecha || '')).startsWith(mesActual))
       .reduce((s, g) => s + Number(g.monto || 0), 0);
     const stockMin  = Number(localStorage.getItem('tcd_stock_min') || 3);
     const stockBajo = productos.filter(p => Number(p.stock || 0) <= Number(stockMin));
@@ -876,7 +894,7 @@ async function cargarVentas() {
   setLoading('ventas', true);
   try {
     const res = await apiGet({ action: 'getAll', hoja: 'ventas', token });
-    ventasCache = (res.data || []).filter(v => v.fecha === fecha);
+    ventasCache = (res.data || []).filter(v => normalizarFecha(v.fecha) === fecha);
     renderTablaVentas(ventasCache);
   } finally {
     setLoading('ventas', false);
@@ -1016,7 +1034,7 @@ async function cargarGastos() {
   setLoading('gastos', true);
   try {
     const res = await apiGet({ action: 'getAll', hoja: 'gastos', token });
-    gastosCache = (res.data || []).filter(g => g.fecha === fecha);
+    gastosCache = (res.data || []).filter(g => normalizarFecha(g.fecha) === fecha);
     renderTablaGastos(gastosCache);
   } finally {
     setLoading('gastos', false);
@@ -1141,8 +1159,8 @@ async function cargarCaja() {
       apiGet({ action: 'getAll', hoja: 'ventas', token }),
       apiGet({ action: 'getAll', hoja: 'gastos', token })
     ]);
-    const ventas = (rV.data || []).filter(v => v.fecha === fecha);
-    const gastos = (rG.data || []).filter(g => g.fecha === fecha);
+    const ventas = (rV.data || []).filter(v => normalizarFecha(v.fecha) === fecha);
+    const gastos = (rG.data || []).filter(g => normalizarFecha(g.fecha) === fecha);
     const totalV = ventas.reduce((s, v) => s + Number(v.total || 0), 0);
     const totalG = gastos.reduce((s, g) => s + Number(g.monto || 0), 0);
 

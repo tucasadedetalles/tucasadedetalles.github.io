@@ -926,8 +926,10 @@ function renderTablaVentas(lista) {
             <td>${v.comprobante
               ? `<a href="${v.comprobante}" target="_blank" style="color:var(--azul);font-weight:600">Ver</a>`
               : '—'}</td>
-            <td>
-              <button class="btn-icon danger"
+            <td style="display:flex;gap:6px">
+              <button class="btn-icon" title="Editar"
+                onclick="editarVenta('${v.id}')">✎</button>
+              <button class="btn-icon danger" title="Eliminar"
                 onclick="confirmarEliminar('ventas','${v.id}','${v.comprobante || ''}','venta')">✕</button>
             </td>
           </tr>`).join('')}
@@ -935,48 +937,65 @@ function renderTablaVentas(lista) {
     </table>`;
 }
 
-function modalNuevaVenta() {
-  abrirModal('Registrar venta', `
+function editarVenta(id) {
+  const v = ventasCache.find(v => v.id === id);
+  if (v) modalNuevaVenta(v);
+}
+
+function modalNuevaVenta(venta = null) {
+  const esNueva  = !venta;
+  const pagos    = ['Efectivo','Transferencia','MercadoPago'];
+  const canales  = ['Local','Web','WhatsApp'];
+  const optPagos = pagos.map(p => `<option${venta?.medioPago === p ? ' selected' : ''}>${p}</option>`).join('');
+  const optCan   = canales.map(c => `<option${venta?.canal === c ? ' selected' : ''}>${c}</option>`).join('');
+
+  abrirModal(esNueva ? 'Registrar venta' : 'Editar venta', `
     <div class="field">
       <label>Descripción / productos vendidos</label>
       <input type="text" id="vta-notas" class="input-text"
-        placeholder="Ej: 2x gomitas rosas, 1x vincha" />
+        placeholder="Ej: 2x gomitas rosas, 1x vincha"
+        value="${venta?.notas || ''}" />
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
       <div class="field">
         <label>Total $</label>
-        <input type="number" id="vta-total" class="input-text" placeholder="0" />
+        <input type="number" id="vta-total" class="input-text"
+          placeholder="0" value="${venta?.total || ''}" />
       </div>
       <div class="field">
         <label>Medio de pago</label>
-        <select id="vta-pago" class="input-select">
-          <option>Efectivo</option>
-          <option>Transferencia</option>
-          <option>MercadoPago</option>
-        </select>
+        <select id="vta-pago" class="input-select">${optPagos}</select>
       </div>
     </div>
     <div class="field">
       <label>Canal</label>
-      <select id="vta-canal" class="input-select">
-        <option>Local</option>
-        <option>Web</option>
-        <option>WhatsApp</option>
-      </select>
+      <select id="vta-canal" class="input-select">${optCan}</select>
     </div>
     <div class="field">
       <label>Comprobante (imagen o PDF — opcional)</label>
+      ${venta?.comprobante
+        ? `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <a href="${venta.comprobante}" target="_blank"
+              style="color:var(--azul);font-weight:600;font-size:13px">
+              📎 Ver comprobante actual
+            </a>
+            <span style="font-size:12px;color:var(--text-muted)">— subí uno nuevo para reemplazarlo</span>
+           </div>`
+        : ''}
       <div class="foto-upload-area">
         <input type="file" id="vta-comprobante" accept="image/*,application/pdf"
           onchange="previsualizarComp('vta-comp-preview', this)" />
         <div class="foto-upload-icon">📎</div>
-        <div class="foto-upload-text">Ticket, captura o PDF</div>
+        <div class="foto-upload-text">${venta?.comprobante ? 'Reemplazar comprobante' : 'Ticket, captura o PDF'}</div>
       </div>
       <img id="vta-comp-preview" class="foto-preview hidden" alt="preview" />
     </div>
   `, `
     <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-    <button class="btn-primary" onclick="guardarVenta()">Registrar</button>
+    <button class="btn-primary"
+      onclick="guardarVenta('${venta?.id || ''}','${venta?.fecha || ''}','${venta?.hora || ''}','${venta?.comprobante || ''}')">
+      ${esNueva ? 'Registrar' : 'Guardar cambios'}
+    </button>
   `);
 }
 
@@ -990,21 +1009,23 @@ function previsualizarComp(previewId, input) {
   }
 }
 
-async function guardarVenta() {
+async function guardarVenta(idExistente = '', fechaExistente = '', horaExistente = '', compExistente = '') {
   const total = document.getElementById('vta-total').value;
   if (!total) { toast('Ingresá el total', 'error'); return; }
   const btn = document.querySelector('#modal-footer .btn-primary');
   btn.textContent = 'Guardando...';
   btn.disabled = true;
   try {
-    const id    = 'VTA-' + Date.now();
-    const fecha = fechaHoy();
-    const hora  = horaAhora();
-    let compUrl = '';
+    const esNueva = !idExistente;
+    const id      = idExistente || 'VTA-' + Date.now();
+    const fecha   = fechaExistente || fechaHoy();
+    const hora    = horaExistente  || horaAhora();
+    let compUrl   = compExistente;
+
     const fileInput = document.getElementById('vta-comprobante');
     if (fileInput?.files[0]) {
       const b64     = await comprimirImagen(fileInput.files[0]);
-      const resComp = await apiPost({ action: 'subirComprobante', id, b64, nombre: id, fecha, tipo: 'venta' });
+      const resComp = await apiPost({ action: 'subirComprobante', id, b64, nombre: id, fecha: fechaHoy(), tipo: 'venta' });
       if (resComp.ok) compUrl = resComp.url;
     }
     const fila = {
@@ -1017,10 +1038,13 @@ async function guardarVenta() {
       comprobante: compUrl
     };
     const res = await apiPost({ action: 'guardar', hoja: 'ventas', fila });
-    if (res.ok) { cerrarModal(); toast('Venta registrada'); await cargarVentas(); }
-    else toast(res.error || 'Error', 'error');
+    if (res.ok) {
+      cerrarModal();
+      toast(esNueva ? 'Venta registrada' : 'Venta actualizada');
+      await cargarVentas();
+    } else toast(res.error || 'Error', 'error');
   } finally {
-    btn.textContent = 'Registrar';
+    btn.textContent = idExistente ? 'Guardar cambios' : 'Registrar';
     btn.disabled = false;
   }
 }
@@ -1065,8 +1089,10 @@ function renderTablaGastos(lista) {
             <td>${g.comprobante
               ? `<a href="${g.comprobante}" target="_blank" style="color:var(--azul);font-weight:600">Ver</a>`
               : '—'}</td>
-            <td>
-              <button class="btn-icon danger"
+            <td style="display:flex;gap:6px">
+              <button class="btn-icon" title="Editar"
+                onclick="editarGasto('${g.id}')">✎</button>
+              <button class="btn-icon danger" title="Eliminar"
                 onclick="confirmarEliminar('gastos','${g.id}','${g.comprobante || ''}','gasto')">✕</button>
             </td>
           </tr>`).join('')}
@@ -1074,60 +1100,81 @@ function renderTablaGastos(lista) {
     </table>`;
 }
 
-function modalNuevoGasto() {
-  abrirModal('Registrar gasto', `
+function editarGasto(id) {
+  const g = gastosCache.find(g => g.id === id);
+  if (g) modalNuevoGasto(g);
+}
+
+function modalNuevoGasto(gasto = null) {
+  const esNuevo = !gasto;
+  const tipos   = ['Compra de mercadería','Packaging','Transporte','Otro'];
+  const optTipo = tipos.map(t => `<option${gasto?.tipo === t ? ' selected' : ''}>${t}</option>`).join('');
+
+  abrirModal(esNuevo ? 'Registrar gasto' : 'Editar gasto', `
     <div class="field">
       <label>Tipo</label>
-      <select id="gto-tipo" class="input-select">
-        <option>Compra de mercadería</option>
-        <option>Packaging</option>
-        <option>Transporte</option>
-        <option>Otro</option>
-      </select>
+      <select id="gto-tipo" class="input-select">${optTipo}</select>
     </div>
     <div class="field">
       <label>Descripción</label>
       <input type="text" id="gto-desc" class="input-text"
-        placeholder="Ej: Compra gomitas mayorista" />
+        placeholder="Ej: Compra gomitas mayorista"
+        value="${gasto?.descripcion || ''}" />
     </div>
     <div class="field">
       <label>Proveedor</label>
-      <input type="text" id="gto-prov" class="input-text" />
+      <input type="text" id="gto-prov" class="input-text"
+        value="${gasto?.proveedor || ''}" />
     </div>
     <div class="field">
       <label>Monto $</label>
-      <input type="number" id="gto-monto" class="input-text" placeholder="0" />
+      <input type="number" id="gto-monto" class="input-text"
+        placeholder="0" value="${gasto?.monto || ''}" />
     </div>
     <div class="field">
       <label>Comprobante (imagen o PDF — opcional)</label>
+      ${gasto?.comprobante
+        ? `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <a href="${gasto.comprobante}" target="_blank"
+              style="color:var(--azul);font-weight:600;font-size:13px">
+              📎 Ver comprobante actual
+            </a>
+            <span style="font-size:12px;color:var(--text-muted)">— subí uno nuevo para reemplazarlo</span>
+           </div>`
+        : ''}
       <div class="foto-upload-area">
         <input type="file" id="gto-comprobante" accept="image/*,application/pdf"
           onchange="previsualizarComp('gto-comp-preview', this)" />
         <div class="foto-upload-icon">📎</div>
-        <div class="foto-upload-text">Ticket, factura o foto</div>
+        <div class="foto-upload-text">${gasto?.comprobante ? 'Reemplazar comprobante' : 'Ticket, factura o foto'}</div>
       </div>
       <img id="gto-comp-preview" class="foto-preview hidden" alt="preview" />
     </div>
   `, `
     <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-    <button class="btn-primary" onclick="guardarGasto()">Registrar</button>
+    <button class="btn-primary"
+      onclick="guardarGasto('${gasto?.id || ''}','${gasto?.fecha || ''}','${gasto?.comprobante || ''}')">
+      ${esNuevo ? 'Registrar' : 'Guardar cambios'}
+    </button>
   `);
 }
 
-async function guardarGasto() {
+async function guardarGasto(idExistente = '', fechaExistente = '', compExistente = '') {
   const monto = document.getElementById('gto-monto').value;
   if (!monto) { toast('Ingresá el monto', 'error'); return; }
   const btn = document.querySelector('#modal-footer .btn-primary');
   btn.textContent = 'Guardando...';
   btn.disabled = true;
   try {
-    const id    = 'GTO-' + Date.now();
-    const fecha = fechaHoy();
-    let compUrl = '';
+    const esNuevo = !idExistente;
+    const id      = idExistente || 'GTO-' + Date.now();
+    const fecha   = fechaExistente || fechaHoy();
+    let compUrl   = compExistente;
+
     const fileInput = document.getElementById('gto-comprobante');
     if (fileInput?.files[0]) {
       const b64     = await comprimirImagen(fileInput.files[0]);
-      const resComp = await apiPost({ action: 'subirComprobante', id, b64, nombre: id, fecha, tipo: 'gasto' });
+      const resComp = await apiPost({ action: 'subirComprobante', id, b64, nombre: id, fecha: fechaHoy(), tipo: 'gasto' });
       if (resComp.ok) compUrl = resComp.url;
     }
     const fila = {
@@ -1139,10 +1186,13 @@ async function guardarGasto() {
       comprobante: compUrl
     };
     const res = await apiPost({ action: 'guardar', hoja: 'gastos', fila });
-    if (res.ok) { cerrarModal(); toast('Gasto registrado'); await cargarGastos(); }
-    else toast(res.error || 'Error', 'error');
+    if (res.ok) {
+      cerrarModal();
+      toast(esNuevo ? 'Gasto registrado' : 'Gasto actualizado');
+      await cargarGastos();
+    } else toast(res.error || 'Error', 'error');
   } finally {
-    btn.textContent = 'Registrar';
+    btn.textContent = idExistente ? 'Guardar cambios' : 'Registrar';
     btn.disabled = false;
   }
 }

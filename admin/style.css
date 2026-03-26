@@ -315,6 +315,7 @@ input, select, textarea { font-family: var(--font-main); }
 .sidebar {
   width: 220px;
   height: 100vh;
+  height: 100dvh;
   background: var(--sidebar-bg);
   display: flex;
   flex-direction: column;

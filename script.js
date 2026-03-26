@@ -371,6 +371,13 @@ async function cargarConfig() {
       linkFB.style.display = 'none';
     }
 
+    const linkIG = document.getElementById('link-instagram');
+    if (linkIG && config.instagram) {
+      linkIG.href = config.instagram;
+    } else if (linkIG) {
+      linkIG.style.display = 'none';
+    }
+
     // Título de la página
     if (config.nombreNegocio) document.title = config.nombreNegocio;
   } catch (e) {

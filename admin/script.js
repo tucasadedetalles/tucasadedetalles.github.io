@@ -1621,6 +1621,7 @@ async function cargarConfig() {
   document.getElementById('cfg-nombre').value    = cfg.nombreNegocio || '';
   document.getElementById('cfg-whatsapp').value  = cfg.whatsapp || '';
   document.getElementById('cfg-facebook').value  = cfg.facebook || '';
+  document.getElementById('cfg-instagram').value = cfg.instagram || '';
   document.getElementById('cfg-mp').value        = cfg.linkMP || '';
   document.getElementById('cfg-stock-min').value = cfg.stockMinAlerta || 3;
   localStorage.setItem('tcd_stock_min', cfg.stockMinAlerta || 3);
@@ -1631,6 +1632,7 @@ async function guardarConfig() {
     { clave: 'nombreNegocio', valor: document.getElementById('cfg-nombre').value },
     { clave: 'whatsapp',      valor: document.getElementById('cfg-whatsapp').value },
     { clave: 'facebook',      valor: document.getElementById('cfg-facebook').value },
+    { clave: 'instagram',     valor: document.getElementById('cfg-instagram').value },
     { clave: 'linkMP',        valor: document.getElementById('cfg-mp').value },
     { clave: 'stockMinAlerta',valor: document.getElementById('cfg-stock-min').value }
   ];

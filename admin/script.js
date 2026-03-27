@@ -1242,11 +1242,24 @@ async function modalNuevaVenta(venta = null) {
     </div>
   `, `
     <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-    <button class="btn-primary"
-      onclick="guardarVenta('${venta?.id || ''}','${venta?.fecha || ''}','${venta?.hora || ''}','${venta?.comprobante || ''}')">
+    <button class="btn-primary" id="btn-guardar-venta"
+      data-id="${venta?.id || ''}"
+      data-fecha="${normalizarFecha(venta?.fecha || '')}"
+      data-hora="${venta?.hora || ''}"
+      data-comp="${venta?.comprobante || ''}"
+      onclick="guardarVentaDesdeModal()">
       ${esNueva ? 'Registrar venta' : 'Guardar cambios'}
     </button>
   `);
+}
+
+function guardarVentaDesdeModal() {
+  const btn = document.getElementById('btn-guardar-venta');
+  const id    = btn?.dataset.id    || '';
+  const fecha = btn?.dataset.fecha || '';
+  const hora  = btn?.dataset.hora  || '';
+  const comp  = btn?.dataset.comp  || '';
+  guardarVenta(id, fecha, hora, comp);
 }
 
 function previsualizarComp(previewId, input) {
@@ -1441,11 +1454,22 @@ function modalNuevoGasto(gasto = null) {
     </div>
   `, `
     <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-    <button class="btn-primary"
-      onclick="guardarGasto('${gasto?.id || ''}','${gasto?.fecha || ''}','${gasto?.comprobante || ''}')">
+    <button class="btn-primary" id="btn-guardar-gasto"
+      data-id="${gasto?.id || ''}"
+      data-fecha="${normalizarFecha(gasto?.fecha || '')}"
+      data-comp="${gasto?.comprobante || ''}"
+      onclick="guardarGastoDesdeModal()">
       ${esNuevo ? 'Registrar' : 'Guardar cambios'}
     </button>
   `);
+}
+
+function guardarGastoDesdeModal() {
+  const btn  = document.getElementById('btn-guardar-gasto');
+  const id   = btn?.dataset.id    || '';
+  const fecha = btn?.dataset.fecha || '';
+  const comp  = btn?.dataset.comp  || '';
+  guardarGasto(id, fecha, comp);
 }
 
 async function guardarGasto(idExistente = '', fechaExistente = '', compExistente = '') {

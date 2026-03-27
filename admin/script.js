@@ -1145,8 +1145,16 @@ function editarVenta(id) {
   if (v) modalNuevaVenta(v);
 }
 
-function modalNuevaVenta(venta = null) {
+async function modalNuevaVenta(venta = null) {
   const esNueva  = !venta;
+
+  // Asegurar que los caches estén cargados antes de abrir el modal
+  if (esNueva) {
+    const promesas = [];
+    if (!productosCache.length)   promesas.push(apiGet({ action: 'getAll', hoja: 'productos', token }).then(r => { productosCache   = r.data || []; }));
+    if (!inventariosCache.length) promesas.push(apiGet({ action: 'getInventarios', token }).then(r => { inventariosCache = r.data || []; }));
+    if (promesas.length) await Promise.all(promesas);
+  }
   const pagos    = ['Efectivo','Transferencia','MercadoPago'];
   const canales  = ['Local','Web','WhatsApp'];
   const optPagos = pagos.map(p => `<option${venta?.medioPago === p ? ' selected' : ''}>${p}</option>`).join('');

@@ -1085,59 +1085,58 @@ function agregarItemDesdeSelector() {
   prodSel.value = '';
 }
 
-function cargarItemsCategoria() {
+async function cargarItemsCategoria() {
   const catSel  = document.getElementById('vta-sel-cat');
   const prodSel = document.getElementById('vta-sel-prod');
   if (!prodSel) return;
 
   const val = catSel?.value || '';
-  prodSel.innerHTML = '<option value="">— Elegí un producto —</option>';
+  prodSel.innerHTML = '<option value="">— Cargando... —</option>';
 
-  if (!val) return;
-
-  let items = [];
-
-  if (val === '__manual__') {
-    // No cargar nada — el campo de notas manual
+  if (!val) {
+    prodSel.innerHTML = '<option value="">— Elegí un producto —</option>';
     return;
   }
 
   if (val === 'catalogo') {
-    // Todos los productos del catálogo
-    items = productosCache.map(p => ({
-      id: p.id, hoja: 'productos',
-      nombre: p.nombre, variante: p.variante || '',
-      precio: Number(p.precioVenta || 0),
-      label: `[${p.codigo||''}] ${p.nombre}${p.variante?' — '+p.variante:''} · ${formatPeso(p.precioVenta)}`
-    }));
-  } else {
-    // Inventario dinámico
-    const inv = inventariosCache.find(i => i.hojaId === val);
-    if (inv) {
-      // Los items del inventario se cargarían acá — usamos los del cache si los tenemos
-      // Como los inventarios son dinámicos, hacemos un fetch rápido
-      apiGet({ action: 'getAll', hoja: val, token }).then(res => {
-        (res.data || []).forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = JSON.stringify({
-            id: p.id, hoja: val,
-            nombre: p.nombre, variante: p.categoria || '',
-            precio: Number(p.precio || p.precioVenta || 0)
-          });
-          opt.textContent = `${p.nombre}${p.categoria?' — '+p.categoria:''} · ${formatPeso(p.precio || p.precioVenta || 0)}`;
-          prodSel.appendChild(opt);
-        });
+    // Cargar catálogo si no está en cache
+    if (!productosCache.length) {
+      const res = await apiGet({ action: 'getAll', hoja: 'productos', token });
+      productosCache = res.data || [];
+    }
+    prodSel.innerHTML = '<option value="">— Elegí un producto —</option>';
+    productosCache.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = JSON.stringify({
+        id: p.id, hoja: 'productos',
+        nombre: p.nombre, variante: p.variante || '',
+        precio: Number(p.precioVenta || 0)
       });
-      return;
+      opt.textContent = `[${p.codigo||''}] ${p.nombre}${p.variante?' — '+p.variante:''} · ${formatPeso(p.precioVenta)}`;
+      prodSel.appendChild(opt);
+    });
+    if (!productosCache.length) {
+      prodSel.innerHTML = '<option value="">Sin productos en el catálogo</option>';
+    }
+  } else {
+    // Inventario dinámico — siempre fetch directo
+    prodSel.innerHTML = '<option value="">— Cargando... —</option>';
+    const res = await apiGet({ action: 'getAll', hoja: val, token });
+    prodSel.innerHTML = '<option value="">— Elegí un producto —</option>';
+    (res.data || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = JSON.stringify({
+        id: p.id, hoja: val,
+        nombre: p.nombre, variante: p.categoria || '',
+        precio: Number(p.precio || p.precioVenta || 0)
+      });
+      opt.textContent = `${p.nombre}${p.categoria?' — '+p.categoria:''} · ${formatPeso(p.precio || p.precioVenta || 0)}`;
+      prodSel.appendChild(opt);
+    });
+    if (!res.data?.length) {
+      prodSel.innerHTML = '<option value="">Sin productos en este inventario</option>';
     }
   }
-
-  items.forEach(it => {
-    const opt = document.createElement('option');
-    opt.value = JSON.stringify(it);
-    opt.textContent = it.label || `${it.nombre}${it.variante?' — '+it.variante:''}`;
-    prodSel.appendChild(opt);
-  });
 }
 
 function editarVenta(id) {

@@ -836,6 +836,57 @@ input, select, textarea { font-family: var(--font-main); }
 .tabla tr:last-child td { border-bottom: none; }
 .tabla tbody tr:hover { background: var(--bg-hover); }
 
+/* ── Tabla cards en mobile ──────────────────────────────── */
+@media (max-width: 768px) {
+  .tabla-wrap { background: transparent; border: none; border-radius: 0; }
+
+  .tabla thead { display: none; }
+
+  .tabla tbody { display: flex; flex-direction: column; gap: 10px; }
+
+  .tabla tbody tr {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+
+  .tabla tbody tr:hover { background: var(--bg-surface); }
+
+  .tabla td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    gap: 8px;
+  }
+
+  .tabla td:last-child { border-bottom: none; }
+
+  .tabla td::before {
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    min-width: 90px;
+  }
+
+  /* Celda de acciones — centrada sin label */
+  .tabla td.td-acciones {
+    justify-content: flex-end;
+    padding: 0.5rem 1rem;
+  }
+
+  .tabla td.td-acciones::before { display: none; }
+}
+
 /* ── Caja ───────────────────────────────────────────────── */
 .caja-header {
   display: flex;

@@ -1200,18 +1200,22 @@ async function modalNuevaVenta(venta = null) {
     </div>
     ` : ''}
     <div class="field">
-      <label>${esNueva ? 'Notas adicionales (opcional)' : 'Descripción'}</label>
+      <label>${esNueva ? 'Notas / descripción (opcional)' : 'Descripción'}</label>
       <input type="text" id="vta-notas" class="input-text"
         placeholder="${esNueva ? 'Ej: envío, descuento aplicado...' : 'Descripción de la venta'}"
         value="${venta?.notas || ''}" />
     </div>
-    <input type="hidden" id="vta-total" value="${venta?.total || 0}" />
+    <input type="hidden" id="vta-total" value="0" />
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
-      ${!esNueva ? `<div class="field">
+      ${esNueva ? `<div class="field">
+        <label>Total $ <span style="font-size:11px;color:var(--text-muted)">(se calcula solo si agregás productos)</span></label>
+        <input type="number" id="vta-total-edit" class="input-text"
+          placeholder="0" oninput="document.getElementById('vta-total').value=this.value" />
+      </div>` : `<div class="field">
         <label>Total $</label>
         <input type="number" id="vta-total-edit" class="input-text"
           placeholder="0" value="${venta?.total || ''}" />
-      </div>` : '<div></div>'}
+      </div>`}
       <div class="field">
         <label>Medio de pago</label>
         <select id="vta-pago" class="input-select">${optPagos}</select>
@@ -1275,22 +1279,27 @@ function previsualizarComp(previewId, input) {
 async function guardarVenta(idExistente = '', fechaExistente = '', horaExistente = '', compExistente = '') {
   const esNueva = !idExistente;
 
-  // Calcular total: si es nueva usa los items, si es edición usa el campo manual
   let total;
   if (esNueva) {
-    total = calcTotalVenta();
-    if (total === 0 && !document.getElementById('vta-notas')?.value) {
-      toast('Agregá al menos un producto o una nota', 'error'); return;
+    // Si hay items del selector, el total viene de ellos
+    if (ventaItems.length > 0) {
+      total = calcTotalVenta();
+    } else {
+      // Venta manual — leer campo total visible
+      total = Number(document.getElementById('vta-total-edit')?.value || 0);
     }
-    // Si no hay items pero hay notas, pedir total manual
-    if (ventaItems.length === 0) {
-      const t = document.getElementById('vta-total')?.value;
-      if (!t || Number(t) === 0) { toast('Ingresá el total o agregá productos', 'error'); return; }
-      total = Number(t);
+    // Si no hay items Y no hay nota, pedir que complete algo
+    const notas = document.getElementById('vta-notas')?.value?.trim() || '';
+    if (!total && !notas) {
+      toast('Agregá al menos un producto o una descripción', 'error'); return;
+    }
+    // Si hay nota pero no total, pedir total
+    if (!total && notas) {
+      toast('Ingresá el total', 'error'); return;
     }
   } else {
-    const tEdit = document.getElementById('vta-total-edit');
-    total = tEdit ? Number(tEdit.value) : Number(document.getElementById('vta-total')?.value || 0);
+    // Edición — leer campo visible vta-total-edit
+    total = Number(document.getElementById('vta-total-edit')?.value || 0);
     if (!total) { toast('Ingresá el total', 'error'); return; }
   }
 

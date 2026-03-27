@@ -22,6 +22,12 @@ let ventasCache      = [];
 let gastosCache      = [];
 let inventariosCache = [];
 
+// Estado del selector de venta
+let ventaItems       = [];   // items seleccionados en el modal de venta
+
+// Estado del resumen mensual
+let resumenMesOffset = 0;    // 0 = mes actual, -1 = mes anterior, etc.
+
 // ══════════════════════════════════════════════════════════════
 //  TEMA
 // ══════════════════════════════════════════════════════════════
@@ -220,7 +226,8 @@ function navegarA(seccion) {
   const labels = {
     dashboard:'Dashboard', productos:'Productos', inventarios:'Inventarios',
     ventas:'Ventas', gastos:'Gastos', caja:'Caja diaria',
-    novedades:'Novedades', fotos:'Fotos', calculadora:'Calculadora', config:'Configuración'
+    novedades:'Novedades', fotos:'Fotos', calculadora:'Calculadora',
+    resumen:'Resumen mensual', config:'Configuración'
   };
   document.getElementById('topbar-title').textContent = labels[seccion] || seccion;
   cerrarSidebar();
@@ -236,6 +243,7 @@ async function cargarSeccion(seccion) {
   if (seccion === 'caja')        await cargarCaja();
   if (seccion === 'novedades')   await cargarNovedades();
   if (seccion === 'fotos')       await cargarFotos();
+  if (seccion === 'resumen')     await cargarResumen();
   if (seccion === 'config')      await cargarConfig();
   if (seccion === 'calculadora') initCalculadora();
 }
@@ -987,15 +995,141 @@ function renderTablaVentas(lista) {
             <td data-label="Comprobante">${v.comprobante
               ? `<a href="${v.comprobante}" target="_blank" style="color:var(--azul);font-weight:600">Ver</a>`
               : '—'}</td>
-            <td class="td-acciones" style="display:flex;gap:6px">
+            <td class="td-acciones" style="display:flex;gap:6px;flex-wrap:wrap">
               <button class="btn-icon" title="Editar"
                 onclick="editarVenta('${v.id}')">✎</button>
+              <button class="btn-icon" title="Recibo PDF" style="color:var(--bordo-soft)"
+                onclick="generarRecibo('${v.id}')">⎙</button>
+              <button class="btn-icon" title="Enviar por WhatsApp" style="color:#25D366"
+                onclick="reciboWhatsApp('${v.id}')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+              </button>
               <button class="btn-icon danger" title="Eliminar"
                 onclick="confirmarEliminar('ventas','${v.id}','${v.comprobante || ''}','venta')">✕</button>
             </td>
           </tr>`).join('')}
       </tbody>
     </table>`;
+}
+
+// ── Helpers de venta items ───────────────────────────────────
+function calcTotalVenta() {
+  return ventaItems.reduce((s, i) => s + (Number(i.precio) * Number(i.cantidad)), 0);
+}
+
+function renderVentaItems() {
+  const lista = document.getElementById('vta-items-lista');
+  const totalEl = document.getElementById('vta-total-live');
+  if (!lista) return;
+
+  if (ventaItems.length === 0) {
+    lista.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:4px 0">Sin productos agregados</div>';
+  } else {
+    lista.innerHTML = ventaItems.map((it, idx) => `
+      <div class="venta-item-row">
+        <span class="venta-item-nombre" title="${it.nombre}${it.variante ? ' — '+it.variante : ''}">${it.nombre}${it.variante ? ' — '+it.variante : ''}</span>
+        <span class="venta-item-precio">${formatPeso(it.precio)}</span>
+        <div class="venta-item-cant">
+          <button onclick="cambiarCantItem(${idx},-1)">−</button>
+          <span>${it.cantidad}</span>
+          <button onclick="cambiarCantItem(${idx},1)">+</button>
+        </div>
+        <button class="venta-item-del" onclick="quitarItem(${idx})">✕</button>
+      </div>`).join('');
+  }
+
+  if (totalEl) {
+    const t = calcTotalVenta();
+    totalEl.querySelector('span:last-child').textContent = formatPeso(t);
+    // Sincronizar campo total oculto
+    const campTotal = document.getElementById('vta-total');
+    if (campTotal) campTotal.value = t;
+  }
+}
+
+function cambiarCantItem(idx, delta) {
+  if (!ventaItems[idx]) return;
+  ventaItems[idx].cantidad = Math.max(1, ventaItems[idx].cantidad + delta);
+  renderVentaItems();
+}
+
+function quitarItem(idx) {
+  ventaItems.splice(idx, 1);
+  renderVentaItems();
+}
+
+function agregarItemDesdeSelector() {
+  const catSel  = document.getElementById('vta-sel-cat');
+  const prodSel = document.getElementById('vta-sel-prod');
+  if (!prodSel?.value) { toast('Seleccioná un producto', 'error'); return; }
+
+  const datos = JSON.parse(prodSel.value);
+  // Si ya está, sumar cantidad
+  const existente = ventaItems.find(i => i.id === datos.id && i.hoja === datos.hoja);
+  if (existente) {
+    existente.cantidad++;
+  } else {
+    ventaItems.push({ ...datos, cantidad: 1 });
+  }
+  renderVentaItems();
+  prodSel.value = '';
+}
+
+function cargarItemsCategoria() {
+  const catSel  = document.getElementById('vta-sel-cat');
+  const prodSel = document.getElementById('vta-sel-prod');
+  if (!prodSel) return;
+
+  const val = catSel?.value || '';
+  prodSel.innerHTML = '<option value="">— Elegí un producto —</option>';
+
+  if (!val) return;
+
+  let items = [];
+
+  if (val === '__manual__') {
+    // No cargar nada — el campo de notas manual
+    return;
+  }
+
+  if (val === 'catalogo') {
+    // Todos los productos del catálogo
+    items = productosCache.map(p => ({
+      id: p.id, hoja: 'productos',
+      nombre: p.nombre, variante: p.variante || '',
+      precio: Number(p.precioVenta || 0),
+      label: `[${p.codigo||''}] ${p.nombre}${p.variante?' — '+p.variante:''} · ${formatPeso(p.precioVenta)}`
+    }));
+  } else {
+    // Inventario dinámico
+    const inv = inventariosCache.find(i => i.hojaId === val);
+    if (inv) {
+      // Los items del inventario se cargarían acá — usamos los del cache si los tenemos
+      // Como los inventarios son dinámicos, hacemos un fetch rápido
+      apiGet({ action: 'getAll', hoja: val, token }).then(res => {
+        (res.data || []).forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = JSON.stringify({
+            id: p.id, hoja: val,
+            nombre: p.nombre, variante: p.categoria || '',
+            precio: Number(p.precio || p.precioVenta || 0)
+          });
+          opt.textContent = `${p.nombre}${p.categoria?' — '+p.categoria:''} · ${formatPeso(p.precio || p.precioVenta || 0)}`;
+          prodSel.appendChild(opt);
+        });
+      });
+      return;
+    }
+  }
+
+  items.forEach(it => {
+    const opt = document.createElement('option');
+    opt.value = JSON.stringify(it);
+    opt.textContent = it.label || `${it.nombre}${it.variante?' — '+it.variante:''}`;
+    prodSel.appendChild(opt);
+  });
 }
 
 function editarVenta(id) {
@@ -1010,19 +1144,58 @@ function modalNuevaVenta(venta = null) {
   const optPagos = pagos.map(p => `<option${venta?.medioPago === p ? ' selected' : ''}>${p}</option>`).join('');
   const optCan   = canales.map(c => `<option${venta?.canal === c ? ' selected' : ''}>${c}</option>`).join('');
 
+  // Reset items
+  ventaItems = [];
+
+  // Opciones de fuente: catálogo + inventarios
+  const optFuentes = [
+    `<option value="">— Fuente de producto —</option>`,
+    `<option value="catalogo">Catálogo de productos</option>`,
+    ...inventariosCache.map(inv =>
+      `<option value="${inv.hojaId}">${inv.nombre}</option>`)
+  ].join('');
+
   abrirModal(esNueva ? 'Registrar venta' : 'Editar venta', `
+    ${esNueva ? `
     <div class="field">
-      <label>Descripción / productos vendidos</label>
+      <label>Agregar productos</label>
+      <div class="venta-agregar-selector">
+        <select id="vta-sel-cat" class="input-select" onchange="cargarItemsCategoria()">
+          ${optFuentes}
+        </select>
+        <select id="vta-sel-prod" class="input-select">
+          <option value="">— Elegí un producto —</option>
+        </select>
+      </div>
+      <button class="btn-secondary" type="button" onclick="agregarItemDesdeSelector()"
+        style="width:100%;margin-top:6px">
+        + Agregar al pedido
+      </button>
+    </div>
+    <div class="field">
+      <label>Productos del pedido</label>
+      <div id="vta-items-lista" class="venta-items-lista">
+        <div style="font-size:12px;color:var(--text-muted);padding:4px 0">Sin productos agregados</div>
+      </div>
+      <div class="venta-total-live" id="vta-total-live">
+        <span>Total calculado</span>
+        <span>${formatPeso(0)}</span>
+      </div>
+    </div>
+    ` : ''}
+    <div class="field">
+      <label>${esNueva ? 'Notas adicionales (opcional)' : 'Descripción'}</label>
       <input type="text" id="vta-notas" class="input-text"
-        placeholder="Ej: 2x gomitas rosas, 1x vincha"
+        placeholder="${esNueva ? 'Ej: envío, descuento aplicado...' : 'Descripción de la venta'}"
         value="${venta?.notas || ''}" />
     </div>
+    <input type="hidden" id="vta-total" value="${venta?.total || 0}" />
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
-      <div class="field">
+      ${!esNueva ? `<div class="field">
         <label>Total $</label>
-        <input type="number" id="vta-total" class="input-text"
+        <input type="number" id="vta-total-edit" class="input-text"
           placeholder="0" value="${venta?.total || ''}" />
-      </div>
+      </div>` : '<div></div>'}
       <div class="field">
         <label>Medio de pago</label>
         <select id="vta-pago" class="input-select">${optPagos}</select>
@@ -1055,7 +1228,7 @@ function modalNuevaVenta(venta = null) {
     <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
     <button class="btn-primary"
       onclick="guardarVenta('${venta?.id || ''}','${venta?.fecha || ''}','${venta?.hora || ''}','${venta?.comprobante || ''}')">
-      ${esNueva ? 'Registrar' : 'Guardar cambios'}
+      ${esNueva ? 'Registrar venta' : 'Guardar cambios'}
     </button>
   `);
 }
@@ -1071,41 +1244,80 @@ function previsualizarComp(previewId, input) {
 }
 
 async function guardarVenta(idExistente = '', fechaExistente = '', horaExistente = '', compExistente = '') {
-  const total = document.getElementById('vta-total').value;
-  if (!total) { toast('Ingresá el total', 'error'); return; }
+  const esNueva = !idExistente;
+
+  // Calcular total: si es nueva usa los items, si es edición usa el campo manual
+  let total;
+  if (esNueva) {
+    total = calcTotalVenta();
+    if (total === 0 && !document.getElementById('vta-notas')?.value) {
+      toast('Agregá al menos un producto o una nota', 'error'); return;
+    }
+    // Si no hay items pero hay notas, pedir total manual
+    if (ventaItems.length === 0) {
+      const t = document.getElementById('vta-total')?.value;
+      if (!t || Number(t) === 0) { toast('Ingresá el total o agregá productos', 'error'); return; }
+      total = Number(t);
+    }
+  } else {
+    const tEdit = document.getElementById('vta-total-edit');
+    total = tEdit ? Number(tEdit.value) : Number(document.getElementById('vta-total')?.value || 0);
+    if (!total) { toast('Ingresá el total', 'error'); return; }
+  }
+
   const btn = document.querySelector('#modal-footer .btn-primary');
   btn.textContent = 'Guardando...';
   btn.disabled = true;
+
   try {
-    const esNueva = !idExistente;
-    const id      = idExistente || 'VTA-' + Date.now();
-    const fecha   = fechaExistente || fechaHoy();
-    const hora    = horaExistente  || horaAhora();
-    let compUrl   = compExistente;
+    const id    = idExistente || 'VTA-' + Date.now();
+    const fecha = fechaExistente || fechaHoy();
+    const hora  = horaExistente  || horaAhora();
+    let compUrl = compExistente;
 
     const fileInput = document.getElementById('vta-comprobante');
     if (fileInput?.files[0]) {
       const b64     = await comprimirImagen(fileInput.files[0]);
-      const resComp = await apiPost({ action: 'subirComprobante', id, b64, nombre: id, fecha: fechaHoy(), tipo: 'venta' });
+      const resComp = await apiPost({ action: 'subirComprobante', id, b64, nombre: id, fecha, tipo: 'venta' });
       if (resComp.ok) compUrl = resComp.url;
     }
+
+    // Armar string de productos para el campo 'productos'
+    const prodStr = ventaItems.length > 0
+      ? ventaItems.map(i => `${i.cantidad}x ${i.nombre}${i.variante?' ('+i.variante+')':''}`).join(', ')
+      : '';
+
+    const notas = document.getElementById('vta-notas')?.value || '';
+
     const fila = {
       id, fecha, hora,
-      productos:   '',
+      productos:   prodStr,
       total,
       medioPago:   document.getElementById('vta-pago').value,
       canal:       document.getElementById('vta-canal').value,
-      notas:       document.getElementById('vta-notas').value,
+      notas:       notas || prodStr,
       comprobante: compUrl
     };
+
     const res = await apiPost({ action: 'guardar', hoja: 'ventas', fila });
-    if (res.ok) {
-      cerrarModal();
-      toast(esNueva ? 'Venta registrada' : 'Venta actualizada');
-      await cargarVentas();
-    } else toast(res.error || 'Error', 'error');
+    if (!res.ok) { toast(res.error || 'Error al guardar', 'error'); return; }
+
+    // Descontar stock si es venta nueva con items del catálogo/inventario
+    if (esNueva && ventaItems.length > 0) {
+      await apiPost({
+        action: 'descontarStock',
+        items:  ventaItems.map(i => ({ id: i.id, hoja: i.hoja, cantidad: i.cantidad }))
+      });
+    }
+
+    cerrarModal();
+    toast(esNueva ? 'Venta registrada' : 'Venta actualizada');
+    ventaItems = [];
+    await cargarVentas();
+    // Refrescar productos si el stock cambió
+    if (esNueva && ventaItems.length > 0) await cargarProductos();
   } finally {
-    btn.textContent = idExistente ? 'Guardar cambios' : 'Registrar';
+    btn.textContent = idExistente ? 'Guardar cambios' : 'Registrar venta';
     btn.disabled = false;
   }
 }
@@ -1632,6 +1844,251 @@ async function eliminarFotoPendiente(fotoUrl) {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  RECIBOS — PDF y WhatsApp
+// ══════════════════════════════════════════════════════════════
+
+function construirDatosVenta(id) {
+  // Busca en ventasCache, si no lo encuentra devuelve null
+  const todas = ventasCache;
+  return todas.find(v => v.id === id) || null;
+}
+
+async function generarRecibo(ventaId) {
+  const v = ventasCache.find(v => v.id === ventaId);
+  if (!v) { toast('Venta no encontrada', 'error'); return; }
+
+  const btn = document.querySelector(`button[onclick="generarRecibo('${ventaId}')"]`);
+  if (btn) { btn.textContent = '...'; btn.disabled = true; }
+
+  try {
+    // Parsear items del campo productos
+    const items = parsearItemsVenta(v.productos || '', v.notas || '', v.total);
+
+    const res = await apiPost({
+      action:    'generarReciboPDF',
+      id:        v.id,
+      fecha:     normalizarFecha(v.fecha),
+      hora:      v.hora || '',
+      items,
+      total:     v.total,
+      medioPago: v.medioPago || '',
+      canal:     v.canal || '',
+      notas:     v.notas || ''
+    });
+
+    if (res.ok) {
+      window.open(res.url, '_blank');
+      toast('Recibo generado');
+    } else {
+      toast(res.error || 'Error al generar el recibo', 'error');
+    }
+  } finally {
+    if (btn) { btn.textContent = '⎙'; btn.disabled = false; }
+  }
+}
+
+async function reciboWhatsApp(ventaId) {
+  const v = ventasCache.find(v => v.id === ventaId);
+  if (!v) { toast('Venta no encontrada', 'error'); return; }
+
+  const btn = document.querySelector(`button[onclick="reciboWhatsApp('${ventaId}')"]`);
+  if (btn) { btn.disabled = true; }
+
+  try {
+    // Primero generar el PDF
+    const items = parsearItemsVenta(v.productos || '', v.notas || '', v.total);
+    const res = await apiPost({
+      action:    'generarReciboPDF',
+      id:        v.id,
+      fecha:     normalizarFecha(v.fecha),
+      hora:      v.hora || '',
+      items,
+      total:     v.total,
+      medioPago: v.medioPago || '',
+      canal:     v.canal || '',
+      notas:     v.notas || ''
+    });
+
+    if (!res.ok) { toast(res.error || 'Error al generar el recibo', 'error'); return; }
+
+    // Armar mensaje WA con el link del PDF
+    const waNum = String(localStorage.getItem('tcd_whatsapp') || '1167682727').replace(/\D/g, '');
+    const fecha = normalizarFecha(v.fecha);
+    const msg = encodeURIComponent(
+      `*Recibo de venta — Tu Casa de Detalles*\n` +
+      `Fecha: ${fecha}${v.hora ? ' ' + v.hora : ''}\n` +
+      `Total: $${Number(v.total).toLocaleString('es-AR')}\n` +
+      `Pago: ${v.medioPago || ''}\n\n` +
+      `📎 Ver recibo: ${res.url}`
+    );
+    window.open(`https://wa.me/54${waNum}?text=${msg}`, '_blank');
+    toast('Abriendo WhatsApp...');
+  } finally {
+    if (btn) { btn.disabled = false; }
+  }
+}
+
+function parsearItemsVenta(productos, notas, total) {
+  // Intenta parsear "2x Producto (variante), 1x Otro"
+  const items = [];
+  if (productos) {
+    const partes = productos.split(',');
+    partes.forEach(p => {
+      const m = p.trim().match(/^(\d+)x\s+(.+)$/);
+      if (m) {
+        items.push({ nombre: m[2].trim(), cantidad: parseInt(m[1]), precio: 0 });
+      }
+    });
+  }
+  // Si no se pudo parsear, usar notas como ítem genérico
+  if (items.length === 0 && (notas || total)) {
+    items.push({ nombre: notas || 'Productos varios', cantidad: 1, precio: Number(total || 0) });
+  }
+  return items;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  RESUMEN MENSUAL
+// ══════════════════════════════════════════════════════════════
+
+function getMesActual() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + resumenMesOffset);
+  return { year: d.getFullYear(), month: d.getMonth() };
+}
+
+function getMesLabel() {
+  const { year, month } = getMesActual();
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  return `${meses[month]} ${year}`;
+}
+
+function getMesPrefijo() {
+  const { year, month } = getMesActual();
+  return `${year}-${String(month + 1).padStart(2, '0')}`;
+}
+
+async function cargarResumen() {
+  setLoading('resumen', true);
+  actualizarLabelMes();
+  try {
+    const prefijo = getMesPrefijo();
+    const [rV, rG] = await Promise.all([
+      apiGet({ action: 'getAll', hoja: 'ventas', token }),
+      apiGet({ action: 'getAll', hoja: 'gastos', token })
+    ]);
+
+    const ventas = (rV.data || []).filter(v => normalizarFecha(v.fecha).startsWith(prefijo));
+    const gastos = (rG.data || []).filter(g => normalizarFecha(g.fecha).startsWith(prefijo));
+
+    const totalV = ventas.reduce((s, v) => s + Number(v.total || 0), 0);
+    const totalG = gastos.reduce((s, g) => s + Number(g.monto  || 0), 0);
+    const saldo  = totalV - totalG;
+
+    document.getElementById('res-ingresos').textContent    = formatPeso(totalV);
+    document.getElementById('res-gastos').textContent      = formatPeso(totalG);
+    document.getElementById('res-ventas-cant').textContent = ventas.length + ' ventas';
+    const saldoEl = document.getElementById('res-saldo');
+    saldoEl.textContent = formatPeso(saldo);
+    saldoEl.style.color = saldo >= 0 ? 'var(--verde)' : 'var(--coral)';
+
+    // Agrupar por día
+    const dias = {};
+    ventas.forEach(v => {
+      const d = normalizarFecha(v.fecha);
+      if (!dias[d]) dias[d] = { ventas: 0, gastos: 0 };
+      dias[d].ventas += Number(v.total || 0);
+    });
+    gastos.forEach(g => {
+      const d = normalizarFecha(g.fecha);
+      if (!dias[d]) dias[d] = { ventas: 0, gastos: 0 };
+      dias[d].gastos += Number(g.monto || 0);
+    });
+
+    const filas = Object.keys(dias).sort().map(d => ({
+      fecha:  d.split('-').reverse().join('/'),
+      ventas: dias[d].ventas,
+      gastos: dias[d].gastos,
+      saldo:  dias[d].ventas - dias[d].gastos
+    }));
+
+    const wrap = document.getElementById('resumen-tabla');
+    if (!wrap) return;
+
+    if (filas.length === 0) {
+      wrap.innerHTML = '<div class="list-empty" style="padding:2rem">Sin movimientos en este mes</div>';
+      return;
+    }
+
+    wrap.innerHTML = `
+      <table class="tabla">
+        <thead>
+          <tr><th>Fecha</th><th>Ventas</th><th>Gastos</th><th>Saldo</th></tr>
+        </thead>
+        <tbody>
+          ${filas.map(f => `
+            <tr>
+              <td data-label="Fecha">${f.fecha}</td>
+              <td data-label="Ventas" style="color:var(--verde);font-weight:700">${formatPeso(f.ventas)}</td>
+              <td data-label="Gastos" style="color:var(--coral);font-weight:700">${formatPeso(f.gastos)}</td>
+              <td data-label="Saldo" style="font-weight:700;color:${f.saldo >= 0 ? 'var(--verde)' : 'var(--coral)'}">${formatPeso(f.saldo)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+    // Guardar datos para el PDF
+    window._resumenDatos = { filas, totalV, totalG, saldo, cantV: ventas.length };
+
+  } finally {
+    setLoading('resumen', false);
+  }
+}
+
+function actualizarLabelMes() {
+  const el = document.getElementById('resumen-mes-label');
+  if (el) el.textContent = getMesLabel();
+}
+
+function cambiarMes(delta) {
+  resumenMesOffset += delta;
+  cargarResumen();
+}
+
+async function descargarResumenPDF() {
+  const datos = window._resumenDatos;
+  if (!datos) { toast('Cargá el resumen primero', 'error'); return; }
+
+  const btn = document.getElementById('btn-descargar-resumen');
+  if (btn) { btn.textContent = '...'; btn.disabled = true; }
+
+  try {
+    const res = await apiPost({
+      action:      'generarResumenPDF',
+      mes:         getMesPrefijo(),
+      mesLabel:    getMesLabel(),
+      filas:       datos.filas,
+      totalVentas: datos.totalV,
+      totalGastos: datos.totalG,
+      saldo:       datos.saldo,
+      cantVentas:  datos.cantV
+    });
+
+    if (res.ok) {
+      window.open(res.url, '_blank');
+      toast('PDF generado');
+    } else {
+      toast(res.error || 'Error al generar el PDF', 'error');
+    }
+  } finally {
+    if (btn) {
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Descargar PDF`;
+      btn.disabled = false;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
 //  CALCULADORA
 // ══════════════════════════════════════════════════════════════
 let calcState = { display: '0', expr: '', operand: null, operator: null, newNum: true };
@@ -1754,6 +2211,7 @@ async function cargarConfig() {
   document.getElementById('cfg-mp').value        = cfg.linkMP || '';
   document.getElementById('cfg-stock-min').value = cfg.stockMinAlerta || 3;
   localStorage.setItem('tcd_stock_min', cfg.stockMinAlerta || 3);
+  if (cfg.whatsapp) localStorage.setItem('tcd_whatsapp', cfg.whatsapp);
 }
 
 async function guardarConfig() {
@@ -1805,6 +2263,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-nueva-novedad')?.addEventListener('click', modalNuevaNovedad);
   document.getElementById('btn-guardar-config')?.addEventListener('click', guardarConfig);
   document.getElementById('btn-caja-cerrar')?.addEventListener('click', cerrarCaja);
+  document.getElementById('btn-ir-resumen')?.addEventListener('click', () => navegarA('resumen'));
+  document.getElementById('btn-mes-prev')?.addEventListener('click', () => cambiarMes(-1));
+  document.getElementById('btn-mes-next')?.addEventListener('click', () => cambiarMes(1));
+  document.getElementById('btn-descargar-resumen')?.addEventListener('click', descargarResumenPDF);
 
   document.getElementById('ventas-fecha')?.addEventListener('change', cargarVentas);
   document.getElementById('gastos-fecha')?.addEventListener('change', cargarGastos);

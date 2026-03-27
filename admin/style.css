@@ -994,6 +994,250 @@ input, select, textarea { font-family: var(--font-main); }
   flex-wrap: wrap;
 }
 
+.caja-header {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  margin-bottom: 1.2rem;
+  flex-wrap: wrap;
+}
+
+/* ── Botón resumen mensual (en caja) ────────────────────── */
+.btn-resumen-mes {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  padding: 0.5rem 1rem;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-main);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.btn-resumen-mes:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--bordo-soft);
+}
+
+.btn-resumen-mes-icon {
+  font-size: 15px;
+  color: var(--bordo-soft);
+}
+
+/* ── Resumen mensual — navegación de mes ───────────────── */
+.resumen-mes-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.btn-mes-nav {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 18px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+  font-family: var(--font-main);
+}
+
+.btn-mes-nav:hover {
+  background: var(--bg-hover);
+  color: var(--bordo-soft);
+}
+
+.resumen-mes-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding: 0 10px;
+  min-width: 120px;
+  text-align: center;
+}
+
+/* ── Botón descargar PDF ────────────────────────────────── */
+.btn-descargar-pdf {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* ── Selector de productos en venta ────────────────────── */
+.venta-items-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+  min-height: 32px;
+}
+
+.venta-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.venta-item-nombre {
+  flex: 1;
+  color: var(--text-primary);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.venta-item-precio {
+  color: var(--verde);
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.venta-item-cant {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.venta-item-cant button {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: var(--font-main);
+  transition: background var(--transition);
+}
+
+.venta-item-cant button:hover { background: var(--bordo); color: #FAF3E0; }
+
+.venta-item-cant span {
+  min-width: 20px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.venta-item-del {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color var(--transition), background var(--transition);
+  font-family: var(--font-main);
+}
+
+.venta-item-del:hover { color: var(--coral); background: rgba(230,126,90,0.12); }
+
+.venta-agregar-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.venta-total-live {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  margin-top: 4px;
+}
+
+.venta-total-live span:first-child {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-muted);
+}
+
+.venta-total-live span:last-child {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--verde);
+}
+
+/* ── Botón enviar recibo por WhatsApp ───────────────────── */
+.btn-recibo-wa {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #25D366;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 1rem;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-main);
+  cursor: pointer;
+  transition: background var(--transition), transform var(--transition);
+}
+
+.btn-recibo-wa:hover { background: #1ebe5a; transform: translateY(-1px); }
+.btn-recibo-wa:active { transform: translateY(0); }
+
+/* ── Botón descargar recibo PDF ─────────────────────────── */
+.btn-recibo-pdf {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  padding: 0.5rem 1rem;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-main);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.btn-recibo-pdf:hover {
+  background: var(--bg-hover);
+  color: var(--bordo-soft);
+  border-color: var(--bordo-soft);
+}
+
+@media (max-width: 768px) {
+  .resumen-mes-label { min-width: 90px; font-size: 12px; }
+  .venta-agregar-selector { grid-template-columns: 1fr; }
+}
+
 /* ── Config ─────────────────────────────────────────────── */
 .config-grid {
   display: grid;

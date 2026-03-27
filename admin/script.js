@@ -2306,7 +2306,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btn-nuevo-producto')?.addEventListener('click', () => modalProducto());
   document.getElementById('btn-nuevo-inventario')?.addEventListener('click', modalNuevoInventario);
-  document.getElementById('btn-nueva-venta')?.addEventListener('click', modalNuevaVenta);
+  document.getElementById('btn-nueva-venta')?.addEventListener('click', () => modalNuevaVenta());
   document.getElementById('btn-nuevo-gasto')?.addEventListener('click', modalNuevoGasto);
   document.getElementById('btn-nueva-novedad')?.addEventListener('click', modalNuevaNovedad);
   document.getElementById('btn-guardar-config')?.addEventListener('click', guardarConfig);

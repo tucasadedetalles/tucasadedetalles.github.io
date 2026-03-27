@@ -303,12 +303,27 @@ function abrirModalProducto(id) {
   );
   const linkMP = config.linkMP || '';
 
+  // Armar array de fotos (solo las que tienen URL)
+  const fotos = [p.foto, p.foto2, p.foto3, p.foto4].filter(f => f && String(f).startsWith('http'));
+
+  const carrusel = fotos.length > 0 ? `
+    <div class="modal-carrusel" id="modal-carrusel">
+      <div class="carrusel-track" id="carrusel-track">
+        ${fotos.map((f, i) => `
+          <div class="carrusel-slide${i === 0 ? ' active' : ''}">
+            <img src="${f}" alt="${p.nombre} foto ${i+1}" loading="${i === 0 ? 'eager' : 'lazy'}" />
+          </div>`).join('')}
+      </div>
+      ${fotos.length > 1 ? `
+        <button class="carrusel-btn carrusel-prev" onclick="moverCarrusel(-1)">‹</button>
+        <button class="carrusel-btn carrusel-next" onclick="moverCarrusel(1)">›</button>
+        <div class="carrusel-dots">
+          ${fotos.map((_, i) => `<span class="carrusel-dot${i === 0 ? ' active' : ''}" onclick="irASlide(${i})"></span>`).join('')}
+        </div>` : ''}
+    </div>` : `<div class="modal-prod-img">📦</div>`;
+
   document.getElementById('modal-producto-inner').innerHTML = `
-    <div class="modal-prod-img">
-      ${p.foto
-        ? `<img src="${p.foto}" alt="${p.nombre}" />`
-        : '📦'}
-    </div>
+    ${carrusel}
     <div class="modal-prod-body">
       <div class="modal-prod-cat">
         <span class="prod-card-cat cat-${prefijo}">${p.categoria || ''}</span>
@@ -341,8 +356,30 @@ function abrirModalProducto(id) {
     </div>
   `;
 
+  // Inicializar carrusel
+  window._carruselIdx = 0;
+  window._carruselTotal = fotos.length;
+
   document.getElementById('modal-overlay')?.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
+}
+
+let _carruselIdx   = 0;
+let _carruselTotal = 0;
+
+function moverCarrusel(dir) {
+  const total = _carruselTotal;
+  if (total < 2) return;
+  _carruselIdx = (_carruselIdx + dir + total) % total;
+  irASlide(_carruselIdx);
+}
+
+function irASlide(idx) {
+  _carruselIdx = idx;
+  document.querySelectorAll('.carrusel-slide').forEach((s, i) =>
+    s.classList.toggle('active', i === idx));
+  document.querySelectorAll('.carrusel-dot').forEach((d, i) =>
+    d.classList.toggle('active', i === idx));
 }
 
 function cerrarModal() {

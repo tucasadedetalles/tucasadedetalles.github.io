@@ -144,6 +144,10 @@
           <div class="caja-header">
             <input type="date" id="caja-fecha" class="input-date" />
             <button class="btn-secondary" id="btn-caja-cerrar">Cerrar caja</button>
+            <button class="btn-resumen-mes" id="btn-ir-resumen">
+              <span class="btn-resumen-mes-icon">◫</span>
+              Ver resumen mensual
+            </button>
           </div>
           <div class="stats-grid">
             <div class="stat-card accent-green">
@@ -168,6 +172,50 @@
               <div class="panel-header"><span class="panel-title">Gastos del día</span></div>
               <div id="caja-gastos-detalle" class="list-empty">Sin datos</div>
             </div>
+          </div>
+        </section>
+
+        <!-- RESUMEN MENSUAL -->
+        <section id="sec-resumen" class="section">
+          <div class="section-toolbar">
+            <div class="resumen-mes-selector">
+              <button class="btn-mes-nav" id="btn-mes-prev">‹</button>
+              <span class="resumen-mes-label" id="resumen-mes-label">Marzo 2026</span>
+              <button class="btn-mes-nav" id="btn-mes-next">›</button>
+            </div>
+            <button class="btn-primary btn-descargar-pdf" id="btn-descargar-resumen">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Descargar PDF
+            </button>
+          </div>
+
+          <!-- Stats del mes -->
+          <div class="stats-grid" style="margin-bottom:1.2rem">
+            <div class="stat-card accent-green">
+              <div class="stat-label">Ingresos del mes</div>
+              <div class="stat-value" id="res-ingresos">$0</div>
+              <div class="stat-sub" id="res-ventas-cant">0 ventas</div>
+            </div>
+            <div class="stat-card accent-coral">
+              <div class="stat-label">Gastos del mes</div>
+              <div class="stat-value" id="res-gastos">$0</div>
+            </div>
+            <div class="stat-card accent-bordo">
+              <div class="stat-label">Saldo neto</div>
+              <div class="stat-value" id="res-saldo">$0</div>
+            </div>
+          </div>
+
+          <!-- Tabla desglose por día -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Desglose por día</span>
+            </div>
+            <div id="resumen-tabla" class="tabla-wrap" style="border:none;border-radius:0"></div>
           </div>
         </section>
 

@@ -10,6 +10,7 @@
     { section: 'ventas',      icon: '◎', label: 'Ventas' },
     { section: 'gastos',      icon: '◐', label: 'Gastos' },
     { section: 'caja',        icon: '▣', label: 'Caja diaria' },
+    { section: 'resumen',     icon: '◫', label: 'Resumen mensual' },
     { section: 'novedades',   icon: '◆', label: 'Novedades' },
     { section: 'fotos',       icon: '🖼', label: 'Fotos' },
     { section: 'calculadora', icon: '⊟', label: 'Calculadora' },

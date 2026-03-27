@@ -113,24 +113,45 @@ function formatPeso(n) {
 }
 
 function fechaHoy() {
-  return new Date().toISOString().split('T')[0];
+  const d = new Date();
+  const y  = d.getFullYear();
+  const m  = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + dd;
 }
 
 function normalizarFecha(f) {
   if (!f) return '';
-  // Si es Date object de Sheets o string con hora, extraer solo YYYY-MM-DD
-  const s = String(f);
-  // Formato ISO: 2026-03-26T00:00:00.000Z
-  if (s.includes('T')) return s.split('T')[0];
-  // Formato con espacio: 2026-03-26 00:00:00
-  if (s.includes(' ') && s.match(/^\d{4}-\d{2}-\d{2}/)) return s.substring(0, 10);
+  const s = String(f).trim();
+
   // Ya es YYYY-MM-DD
   if (s.match(/^\d{4}-\d{2}-\d{2}$/)) return s;
-  // Fecha de Excel como número (días desde 1900)
-  if (s.match(/^\d+$/)) {
+
+  // Formato ISO con T: 2026-03-26T00:00:00.000Z
+  if (s.match(/^\d{4}-\d{2}-\d{2}T/)) return s.substring(0, 10);
+
+  // Formato con espacio: 2026-03-26 00:00:00
+  if (s.match(/^\d{4}-\d{2}-\d{2} /)) return s.substring(0, 10);
+
+  // Número de serie de Excel (ej: 46135)
+  if (s.match(/^\d{5}$/)) {
     const d = new Date(Math.round((parseInt(s) - 25569) * 86400 * 1000));
     return d.toISOString().split('T')[0];
   }
+
+  // Cualquier otro formato — intentar parsear con Date()
+  // Cubre: "Wed Mar 26 2026 00:00:00 GMT-0300", "26/03/2026", etc.
+  try {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      // Usar fecha local para evitar desfase de zona horaria
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + dd;
+    }
+  } catch(e) {}
+
   return s.substring(0, 10);
 }
 

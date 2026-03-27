@@ -487,30 +487,41 @@ function modalProducto(prod = null) {
       </label>
     </div>
     <div class="field">
-      <label>Foto del producto</label>
-      <div class="foto-upload-area" id="foto-drop-prod">
-        <input type="file" id="foto-input-prod" accept="image/*"
-          onchange="previsualizarFotoProd(this)" />
-        <div class="foto-upload-icon">🖼</div>
-        <div class="foto-upload-text">
-          ${prod?.foto
-            ? 'Subir nueva foto (reemplaza la actual)'
-            : 'Hacé clic o arrastrá — se convierte a JPG automáticamente'}
-        </div>
+      <label>Fotos del producto (hasta 4)</label>
+      <div class="fotos-slots">
+        ${['foto','foto2','foto3','foto4'].map((slot, i) => {
+          const url = prod?.[slot] || '';
+          return `
+            <div class="foto-slot" id="slot-wrap-${slot}">
+              <div class="foto-slot-num">${i + 1}</div>
+              ${url
+                ? `<div class="foto-slot-preview">
+                    <img src="${url}" alt="foto ${i+1}" />
+                    <button class="foto-slot-del" type="button"
+                      onclick="eliminarSlotFoto('${prod?.id || ''}','${slot}','${url}')">✕</button>
+                   </div>`
+                : `<label class="foto-slot-empty">
+                    <input type="file" accept="image/*" data-slot="${slot}"
+                      onchange="previsualizarSlot(this)" />
+                    <span class="foto-slot-icon">+</span>
+                   </label>`
+              }
+            </div>`;
+        }).join('')}
       </div>
-      ${prod?.foto
-        ? `<img src="${prod.foto}" class="foto-preview" alt="foto actual" />`
-        : '<img id="foto-preview-prod" class="foto-preview hidden" alt="preview" />'}
+      <p style="font-size:11px;color:var(--text-muted);margin-top:6px">
+        Solo la foto 1 se sube automáticamente al guardar. Las fotos 2-4 se suben al tocar cada slot.
+      </p>
       <button class="btn-gemini" type="button" id="btn-gemini-foto"
         onclick="analizarFotoConGemini()"
         style="margin-top:8px;width:100%">
-        ✦ Analizar foto con Gemini
+        ✦ Analizar foto 1 con Gemini
       </button>
       <div id="gemini-foto-estado" style="font-size:12px;color:var(--text-muted);margin-top:4px;text-align:center"></div>
     </div>
   `, `
     <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-    <button class="btn-primary" onclick="guardarProducto('${prod?.id || ''}','${prod?.foto || ''}')">Guardar</button>
+    <button class="btn-primary" onclick="guardarProducto('${prod?.id || ''}','${prod?.foto || ''}','${prod?.foto2 || ''}','${prod?.foto3 || ''}','${prod?.foto4 || ''}')">Guardar</button>
   `);
 
   if (esNuevo) actualizarCodigoProd();
@@ -524,51 +535,90 @@ async function actualizarCodigoProd() {
   if (inp) inp.value = res.codigo || '';
 }
 
-function previsualizarFotoProd(input) {
+function previsualizarSlot(input) {
+  const slot = input.dataset.slot;
   const file = input.files[0];
   if (!file || !file.type.startsWith('image/')) return;
-  const preview = document.getElementById('foto-preview-prod');
-  if (preview) {
-    preview.src = URL.createObjectURL(file);
-    preview.classList.remove('hidden');
+
+  const wrap = input.closest('.foto-slot');
+  if (!wrap) return;
+
+  // Reemplazar el label por preview con botón borrar (temporal hasta guardar)
+  const url = URL.createObjectURL(file);
+  wrap.querySelector('.foto-slot-empty').outerHTML = `
+    <div class="foto-slot-preview">
+      <img src="${url}" alt="nueva foto" />
+      <button class="foto-slot-del" type="button"
+        onclick="limpiarSlotNuevo(this,'${slot}')">✕</button>
+    </div>`;
+}
+
+function limpiarSlotNuevo(btn, slot) {
+  const wrap = btn.closest('.foto-slot');
+  if (!wrap) return;
+  const i = ['foto','foto2','foto3','foto4'].indexOf(slot);
+  wrap.querySelector('.foto-slot-preview').outerHTML = `
+    <label class="foto-slot-empty">
+      <input type="file" accept="image/*" data-slot="${slot}"
+        onchange="previsualizarSlot(this)" />
+      <span class="foto-slot-icon">+</span>
+    </label>`;
+}
+
+async function eliminarSlotFoto(prodId, slot, fotoUrl) {
+  if (!prodId) return; // producto nuevo, solo limpiar UI
+  const wrap = document.getElementById('slot-wrap-' + slot);
+  const i = ['foto','foto2','foto3','foto4'].indexOf(slot);
+  const res = await apiPost({ action: 'eliminarFotoSlot', hoja: 'productos', id: prodId, slot, fotoUrl });
+  if (res.ok) {
+    toast('Foto eliminada');
+    if (wrap) wrap.querySelector('.foto-slot-preview').outerHTML = `
+      <label class="foto-slot-empty">
+        <input type="file" accept="image/*" data-slot="${slot}"
+          onchange="previsualizarSlot(this)" />
+        <span class="foto-slot-icon">+</span>
+      </label>`;
+    // Actualizar cache
+    const prod = productosCache.find(p => p.id === prodId);
+    if (prod) prod[slot] = '';
+  } else {
+    toast(res.error || 'Error al eliminar', 'error');
   }
 }
 
-async function analizarFotoConGemini() {
-  const input  = document.getElementById('foto-input-prod');
-  const estado = document.getElementById('gemini-foto-estado');
-  const btn    = document.getElementById('btn-gemini-foto');
+function previsualizarFotoProd(input) {
+  // Mantener por compatibilidad con Gemini
+  const file = input.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+}
 
-  if (!input?.files[0]) {
-    toast('Primero seleccioná una foto', 'error'); return;
+async function analizarFotoConGemini() {
+  // Busca la foto del slot principal
+  const slotInput = document.querySelector('.foto-slot input[data-slot="foto"]');
+  const estado    = document.getElementById('gemini-foto-estado');
+  const btn       = document.getElementById('btn-gemini-foto');
+
+  if (!slotInput?.files[0]) {
+    toast('Primero seleccioná la foto 1', 'error'); return;
   }
 
   const categoria = document.getElementById('mp-cat')?.value || '';
-
   btn.textContent = '...analizando';
   btn.disabled    = true;
   if (estado) estado.textContent = 'Gemini está analizando la imagen...';
 
   try {
-    const b64 = await comprimirImagen(input.files[0]);
+    const b64 = await comprimirImagen(slotInput.files[0]);
     const res = await apiPost({ action: 'geminiAnalizarFoto', b64, categoria });
 
     if (res.ok) {
-      // Completar campos solo si están vacíos
       const campNombre = document.getElementById('mp-nombre');
       const campDesc   = document.getElementById('mp-descripcion');
       const campVar    = document.getElementById('mp-variante');
-
-      if (campNombre && !campNombre.value && res.nombre)
-        campNombre.value = res.nombre;
-      if (campDesc && !campDesc.value && res.descripcion)
-        campDesc.value = res.descripcion;
-      if (campVar && !campVar.value && res.variante)
-        campVar.value = res.variante;
-
-      // Si el nombre/cat cambiaron actualizar código
+      if (campNombre && !campNombre.value && res.nombre)   campNombre.value = res.nombre;
+      if (campDesc   && !campDesc.value   && res.descripcion) campDesc.value = res.descripcion;
+      if (campVar    && !campVar.value    && res.variante) campVar.value    = res.variante;
       await actualizarCodigoProd();
-
       if (estado) estado.textContent = '✓ Gemini completó nombre, descripción y variante';
       toast('Foto analizada con Gemini');
     } else {
@@ -579,7 +629,7 @@ async function analizarFotoConGemini() {
     if (estado) estado.textContent = 'Error de conexión';
     toast('Error al analizar', 'error');
   } finally {
-    btn.textContent = '✦ Analizar foto con Gemini';
+    btn.textContent = '✦ Analizar foto 1 con Gemini';
     btn.disabled    = false;
   }
 }
@@ -599,7 +649,7 @@ async function generarDescripcion() {
   else toast('Gemini no respondió', 'error');
 }
 
-async function guardarProducto(idExistente, fotoAnterior) {
+async function guardarProducto(idExistente, foto1Ant, foto2Ant, foto3Ant, foto4Ant) {
   const nombre = document.getElementById('mp-nombre').value;
   if (!nombre) { toast('El nombre es obligatorio', 'error'); return; }
 
@@ -608,23 +658,31 @@ async function guardarProducto(idExistente, fotoAnterior) {
   btn.disabled = true;
 
   try {
-    const id = idExistente || 'PRD-' + Date.now();
+    const id  = idExistente || 'PRD-' + Date.now();
+    const cat = document.getElementById('mp-cat').value;
 
-    // Subir foto si hay una nueva
-    let fotoUrl = fotoAnterior || '';
-    const fileInput = document.getElementById('foto-input-prod');
-    if (fileInput?.files[0]) {
-      const cat = document.getElementById('mp-cat').value;
-      const b64 = await comprimirImagen(fileInput.files[0]);
-      const resF = await apiPost({ action: 'subirFoto', hoja: 'productos', id, b64, nombre: id, categoria: cat });
-      if (resF.ok) fotoUrl = resF.url;
+    // Subir fotos de los slots que tengan archivo nuevo
+    const slots    = ['foto','foto2','foto3','foto4'];
+    const anteriores = [foto1Ant, foto2Ant, foto3Ant, foto4Ant];
+    const urls     = [...anteriores];
+
+    for (let i = 0; i < slots.length; i++) {
+      const input = document.querySelector(`.foto-slot input[data-slot="${slots[i]}"]`);
+      if (input?.files[0]) {
+        const b64  = await comprimirImagen(input.files[0]);
+        const resF = await apiPost({
+          action: 'subirFotoSlot', hoja: 'productos',
+          id, slot: slots[i], b64, nombre: id, categoria: cat
+        });
+        if (resF.ok) urls[i] = resF.url;
+      }
     }
 
     const fila = {
       id,
       codigo:      document.getElementById('mp-codigo').value,
       nombre,
-      categoria:   document.getElementById('mp-cat').value,
+      categoria:   cat,
       variante:    document.getElementById('mp-variante').value,
       descripcion: document.getElementById('mp-descripcion').value,
       precioVenta: document.getElementById('mp-pventa').value,
@@ -633,7 +691,10 @@ async function guardarProducto(idExistente, fotoAnterior) {
       stockMinimo: document.getElementById('mp-stock-min').value,
       visible:     document.getElementById('mp-visible').checked ? 'true' : 'false',
       destacado:   document.getElementById('mp-destacado').checked ? 'true' : 'false',
-      foto:        fotoUrl,
+      foto:        urls[0] || '',
+      foto2:       urls[1] || '',
+      foto3:       urls[2] || '',
+      foto4:       urls[3] || '',
       creadoEn:    idExistente ? '' : fechaHoy()
     };
 

@@ -918,15 +918,15 @@ function renderTablaVentas(lista) {
       <tbody>
         ${lista.map(v => `
           <tr>
-            <td>${v.hora || '—'}</td>
-            <td>${v.notas || ''}</td>
-            <td style="font-weight:700;color:var(--verde)">${formatPeso(v.total)}</td>
-            <td>${v.medioPago || ''}</td>
-            <td>${v.canal || ''}</td>
-            <td>${v.comprobante
+            <td data-label="Hora">${v.hora || '—'}</td>
+            <td data-label="Descripción">${v.notas || ''}</td>
+            <td data-label="Total" style="font-weight:700;color:var(--verde)">${formatPeso(v.total)}</td>
+            <td data-label="Pago">${v.medioPago || ''}</td>
+            <td data-label="Canal">${v.canal || ''}</td>
+            <td data-label="Comprobante">${v.comprobante
               ? `<a href="${v.comprobante}" target="_blank" style="color:var(--azul);font-weight:600">Ver</a>`
               : '—'}</td>
-            <td style="display:flex;gap:6px">
+            <td class="td-acciones" style="display:flex;gap:6px">
               <button class="btn-icon" title="Editar"
                 onclick="editarVenta('${v.id}')">✎</button>
               <button class="btn-icon danger" title="Eliminar"
@@ -1082,14 +1082,14 @@ function renderTablaGastos(lista) {
       <tbody>
         ${lista.map(g => `
           <tr>
-            <td>${g.tipo || ''}</td>
-            <td>${g.descripcion || ''}</td>
-            <td>${g.proveedor || '—'}</td>
-            <td style="font-weight:700;color:var(--coral)">${formatPeso(g.monto)}</td>
-            <td>${g.comprobante
+            <td data-label="Tipo">${g.tipo || ''}</td>
+            <td data-label="Descripción">${g.descripcion || ''}</td>
+            <td data-label="Proveedor">${g.proveedor || '—'}</td>
+            <td data-label="Monto" style="font-weight:700;color:var(--coral)">${formatPeso(g.monto)}</td>
+            <td data-label="Comprobante">${g.comprobante
               ? `<a href="${g.comprobante}" target="_blank" style="color:var(--azul);font-weight:600">Ver</a>`
               : '—'}</td>
-            <td style="display:flex;gap:6px">
+            <td class="td-acciones" style="display:flex;gap:6px">
               <button class="btn-icon" title="Editar"
                 onclick="editarGasto('${g.id}')">✎</button>
               <button class="btn-icon danger" title="Eliminar"

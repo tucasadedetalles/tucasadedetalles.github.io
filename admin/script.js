@@ -287,6 +287,14 @@ function mostrarApp() {
   bindNav();
   initTema();
   cargarSeccion('dashboard');
+  // Precargar inventarios y productos en background para que estén disponibles
+  // al abrir el modal de venta desde cualquier sección
+  apiGet({ action: 'getInventarios', token }).then(res => {
+    inventariosCache = res.data || [];
+  }).catch(() => {});
+  apiGet({ action: 'getAll', hoja: 'productos', token }).then(res => {
+    productosCache = res.data || [];
+  }).catch(() => {});
 }
 
 function logout() {

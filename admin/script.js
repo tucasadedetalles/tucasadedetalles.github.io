@@ -1069,42 +1069,72 @@ function quitarItem(idx) {
 }
 
 function agregarItemDesdeSelector() {
-  const catSel  = document.getElementById('vta-sel-cat');
+  const catSel = document.getElementById('vta-sel-cat');
+  const val    = catSel?.value || '';
+
+  if (val === '__manual__') {
+    // Modo manual
+    const nombre = document.getElementById('vta-manual-nombre')?.value?.trim();
+    const precio = Number(document.getElementById('vta-manual-precio')?.value || 0);
+    if (!nombre) { toast('Escribí el nombre del producto', 'error'); return; }
+    if (!precio) { toast('Ingresá el precio', 'error'); return; }
+    ventaItems.push({ id: null, hoja: null, nombre, variante: '', precio, cantidad: 1 });
+    // Limpiar campos
+    document.getElementById('vta-manual-nombre').value = '';
+    document.getElementById('vta-manual-precio').value = '';
+    renderVentaItems();
+    return;
+  }
+
+  // Modo selector
   const prodSel = document.getElementById('vta-sel-prod');
   if (!prodSel?.value) { toast('Seleccioná un producto', 'error'); return; }
-
   const datos = JSON.parse(prodSel.value);
-  // Si ya está, sumar cantidad
-  const existente = ventaItems.find(i => i.id === datos.id && i.hoja === datos.hoja);
+  const existente = ventaItems.find(i => i.id && i.id === datos.id && i.hoja === datos.hoja);
   if (existente) {
     existente.cantidad++;
   } else {
     ventaItems.push({ ...datos, cantidad: 1 });
   }
-  renderVentaItems();
   prodSel.value = '';
+  renderVentaItems();
 }
 
 async function cargarItemsCategoria() {
   const catSel  = document.getElementById('vta-sel-cat');
   const prodSel = document.getElementById('vta-sel-prod');
+  const manualWrap = document.getElementById('vta-manual-wrap');
   if (!prodSel) return;
 
   const val = catSel?.value || '';
-  prodSel.innerHTML = '<option value="">— Cargando... —</option>';
+
+  // Resetear estado visual
+  prodSel.style.display = '';
+  if (manualWrap) manualWrap.style.display = 'none';
 
   if (!val) {
     prodSel.innerHTML = '<option value="">— Elegí un producto —</option>';
     return;
   }
 
+  if (val === '__manual__') {
+    prodSel.style.display = 'none';
+    if (manualWrap) manualWrap.style.display = 'grid';
+    return;
+  }
+
+  prodSel.innerHTML = '<option value="">— Cargando... —</option>';
+
   if (val === 'catalogo') {
-    // Cargar catálogo si no está en cache
     if (!productosCache.length) {
       const res = await apiGet({ action: 'getAll', hoja: 'productos', token });
       productosCache = res.data || [];
     }
     prodSel.innerHTML = '<option value="">— Elegí un producto —</option>';
+    if (!productosCache.length) {
+      prodSel.innerHTML = '<option value="">Sin productos en el catálogo</option>';
+      return;
+    }
     productosCache.forEach(p => {
       const opt = document.createElement('option');
       opt.value = JSON.stringify({
@@ -1115,15 +1145,15 @@ async function cargarItemsCategoria() {
       opt.textContent = `[${p.codigo||''}] ${p.nombre}${p.variante?' — '+p.variante:''} · ${formatPeso(p.precioVenta)}`;
       prodSel.appendChild(opt);
     });
-    if (!productosCache.length) {
-      prodSel.innerHTML = '<option value="">Sin productos en el catálogo</option>';
-    }
   } else {
-    // Inventario dinámico — siempre fetch directo
-    prodSel.innerHTML = '<option value="">— Cargando... —</option>';
+    // Inventario dinámico
     const res = await apiGet({ action: 'getAll', hoja: val, token });
     prodSel.innerHTML = '<option value="">— Elegí un producto —</option>';
-    (res.data || []).forEach(p => {
+    if (!res.data?.length) {
+      prodSel.innerHTML = '<option value="">Sin productos en este inventario</option>';
+      return;
+    }
+    res.data.forEach(p => {
       const opt = document.createElement('option');
       opt.value = JSON.stringify({
         id: p.id, hoja: val,
@@ -1133,9 +1163,6 @@ async function cargarItemsCategoria() {
       opt.textContent = `${p.nombre}${p.categoria?' — '+p.categoria:''} · ${formatPeso(p.precio || p.precioVenta || 0)}`;
       prodSel.appendChild(opt);
     });
-    if (!res.data?.length) {
-      prodSel.innerHTML = '<option value="">Sin productos en este inventario</option>';
-    }
   }
 }
 
@@ -1177,10 +1204,19 @@ async function modalNuevaVenta(venta = null) {
       <div class="venta-agregar-selector">
         <select id="vta-sel-cat" class="input-select" onchange="cargarItemsCategoria()">
           ${optFuentes}
+          <option value="__manual__">✎ Agregar a mano</option>
         </select>
         <select id="vta-sel-prod" class="input-select">
           <option value="">— Elegí un producto —</option>
         </select>
+      </div>
+      <div id="vta-manual-wrap" style="display:none;gap:8px;margin-top:6px">
+        <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
+          <input type="text" id="vta-manual-nombre" class="input-text"
+            placeholder="Nombre del producto" />
+          <input type="number" id="vta-manual-precio" class="input-text"
+            placeholder="Precio $" style="width:110px" />
+        </div>
       </div>
       <button class="btn-secondary" type="button" onclick="agregarItemDesdeSelector()"
         style="width:100%;margin-top:6px">

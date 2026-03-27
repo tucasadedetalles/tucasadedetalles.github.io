@@ -1160,8 +1160,8 @@ input, select, textarea { font-family: var(--font-main); }
 .venta-item-del:hover { color: var(--coral); background: rgba(230,126,90,0.12); }
 
 .venta-agregar-selector {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   margin-bottom: 6px;
 }

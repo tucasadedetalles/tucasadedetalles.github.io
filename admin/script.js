@@ -1100,54 +1100,93 @@ function agregarItemDesdeSelector() {
   renderVentaItems();
 }
 
-async function cargarItemsCategoria() {
-  const catSel  = document.getElementById('vta-sel-cat');
-  const prodSel = document.getElementById('vta-sel-prod');
+// Paso 1: al elegir fuente (Catálogo / Inventario / Manual)
+function cargarCategoriasVenta() {
+  const catSel    = document.getElementById('vta-sel-cat');
+  const subcatSel = document.getElementById('vta-sel-subcat');
+  const prodSel   = document.getElementById('vta-sel-prod');
   const manualWrap = document.getElementById('vta-manual-wrap');
-  if (!prodSel) return;
-
   const val = catSel?.value || '';
 
-  // Resetear estado visual
-  prodSel.style.display = '';
+  // Reset
+  if (subcatSel) { subcatSel.style.display = 'none'; subcatSel.innerHTML = '<option value="">— Elegí categoría —</option>'; }
+  if (prodSel)   { prodSel.style.display   = 'none'; prodSel.innerHTML   = '<option value="">— Elegí un producto —</option>'; }
   if (manualWrap) manualWrap.style.display = 'none';
 
-  if (!val) {
-    prodSel.innerHTML = '<option value="">— Elegí un producto —</option>';
-    return;
-  }
+  if (!val) return;
 
   if (val === '__manual__') {
-    prodSel.style.display = 'none';
     if (manualWrap) manualWrap.style.display = 'grid';
     return;
   }
 
-  prodSel.innerHTML = '<option value="">— Cargando... —</option>';
-
   if (val === 'catalogo') {
+    // Sacar categorías únicas del cache
+    const cats = [...new Set(productosCache.map(p => p.categoria).filter(Boolean))].sort();
+    if (!cats.length) {
+      // Sin categorías — mostrar todos directamente
+      cargarItemsCategoria();
+      return;
+    }
+    subcatSel.innerHTML = '<option value="">— Elegí categoría —</option>' +
+      cats.map(c => `<option value="${c}">${c}</option>`).join('');
+    subcatSel.style.display = '';
+  } else {
+    // Inventario — mostrar directamente sin subcategoría
+    subcatSel.style.display = 'none';
+    cargarItemsCategoria();
+  }
+}
+
+// Paso 2: al elegir categoría → cargar productos filtrados
+async function cargarItemsCategoria() {
+  const catSel     = document.getElementById('vta-sel-cat');
+  const subcatSel  = document.getElementById('vta-sel-subcat');
+  const prodSel    = document.getElementById('vta-sel-prod');
+  const manualWrap = document.getElementById('vta-manual-wrap');
+  if (!prodSel) return;
+
+  const fuente   = catSel?.value   || '';
+  const subcatVal = subcatSel?.value || '';
+
+  if (manualWrap) manualWrap.style.display = 'none';
+  prodSel.innerHTML = '<option value="">— Cargando... —</option>';
+  prodSel.style.display = '';
+
+  if (fuente === 'catalogo') {
+    // Cargar cache si está vacío
     if (!productosCache.length) {
       const res = await apiGet({ action: 'getAll', hoja: 'productos', token });
       productosCache = res.data || [];
+      // Rellenar subcategorías si hace falta
+      const subcatSel2 = document.getElementById('vta-sel-subcat');
+      if (subcatSel2 && subcatSel2.options.length <= 1) {
+        const cats = [...new Set(productosCache.map(p => p.categoria).filter(Boolean))].sort();
+        subcatSel2.innerHTML = '<option value="">— Elegí categoría —</option>' +
+          cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        subcatSel2.style.display = '';
+        prodSel.innerHTML = '<option value="">— Elegí un producto —</option>';
+        prodSel.style.display = 'none';
+        return;
+      }
     }
+    const filtrados = subcatVal
+      ? productosCache.filter(p => p.categoria === subcatVal)
+      : productosCache;
     prodSel.innerHTML = '<option value="">— Elegí un producto —</option>';
-    if (!productosCache.length) {
-      prodSel.innerHTML = '<option value="">Sin productos en el catálogo</option>';
+    if (!filtrados.length) {
+      prodSel.innerHTML = '<option value="">Sin productos en esta categoría</option>';
       return;
     }
-    productosCache.forEach(p => {
+    filtrados.forEach(p => {
       const opt = document.createElement('option');
-      opt.value = JSON.stringify({
-        id: p.id, hoja: 'productos',
-        nombre: p.nombre, variante: p.variante || '',
-        precio: Number(p.precioVenta || 0)
-      });
-      opt.textContent = `[${p.codigo||''}] ${p.nombre}${p.variante?' — '+p.variante:''} · ${formatPeso(p.precioVenta)}`;
+      opt.value = JSON.stringify({ id: p.id, hoja: 'productos', nombre: p.nombre, variante: p.variante || '', precio: Number(p.precioVenta || 0) });
+      opt.textContent = `${p.nombre}${p.variante ? ' — ' + p.variante : ''} · ${formatPeso(p.precioVenta)}`;
       prodSel.appendChild(opt);
     });
   } else {
     // Inventario dinámico
-    const res = await apiGet({ action: 'getAll', hoja: val, token });
+    const res = await apiGet({ action: 'getAll', hoja: fuente, token });
     prodSel.innerHTML = '<option value="">— Elegí un producto —</option>';
     if (!res.data?.length) {
       prodSel.innerHTML = '<option value="">Sin productos en este inventario</option>';
@@ -1155,12 +1194,8 @@ async function cargarItemsCategoria() {
     }
     res.data.forEach(p => {
       const opt = document.createElement('option');
-      opt.value = JSON.stringify({
-        id: p.id, hoja: val,
-        nombre: p.nombre, variante: p.categoria || '',
-        precio: Number(p.precio || p.precioVenta || 0)
-      });
-      opt.textContent = `${p.nombre}${p.categoria?' — '+p.categoria:''} · ${formatPeso(p.precio || p.precioVenta || 0)}`;
+      opt.value = JSON.stringify({ id: p.id, hoja: fuente, nombre: p.nombre, variante: p.categoria || '', precio: Number(p.precio || p.precioVenta || 0) });
+      opt.textContent = `${p.nombre}${p.categoria ? ' — ' + p.categoria : ''} · ${formatPeso(p.precio || p.precioVenta || 0)}`;
       prodSel.appendChild(opt);
     });
   }
@@ -1202,11 +1237,14 @@ async function modalNuevaVenta(venta = null) {
     <div class="field">
       <label>Agregar productos</label>
       <div class="venta-agregar-selector">
-        <select id="vta-sel-cat" class="input-select" onchange="cargarItemsCategoria()">
+        <select id="vta-sel-cat" class="input-select" onchange="cargarCategoriasVenta()">
           ${optFuentes}
           <option value="__manual__">✎ Agregar a mano</option>
         </select>
-        <select id="vta-sel-prod" class="input-select">
+        <select id="vta-sel-subcat" class="input-select" style="display:none" onchange="cargarItemsCategoria()">
+          <option value="">— Elegí categoría —</option>
+        </select>
+        <select id="vta-sel-prod" class="input-select" style="display:none">
           <option value="">— Elegí un producto —</option>
         </select>
       </div>

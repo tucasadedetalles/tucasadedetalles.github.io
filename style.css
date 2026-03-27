@@ -859,6 +859,80 @@ img { display: block; max-width: 100%; }
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 }
 
+/* ── Carrusel de fotos ──────────────────────────────────── */
+.modal-carrusel {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  background: var(--crema-deep);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  overflow: hidden;
+}
+
+.carrusel-track { width: 100%; height: 100%; }
+
+.carrusel-slide {
+  display: none;
+  width: 100%;
+  height: 100%;
+}
+
+.carrusel-slide.active { display: block; }
+
+.carrusel-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.carrusel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.35);
+  border: none;
+  color: #fff;
+  font-size: 26px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+  z-index: 5;
+  line-height: 1;
+}
+
+.carrusel-btn:hover { background: rgba(0,0,0,0.6); }
+.carrusel-prev { left: 10px; }
+.carrusel-next { right: 10px; }
+
+.carrusel-dots {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 5;
+}
+
+.carrusel-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.carrusel-dot.active {
+  background: #fff;
+  transform: scale(1.25);
+}
+
 .modal-prod-body {
   padding: 1.6rem 1.8rem 2rem;
 }

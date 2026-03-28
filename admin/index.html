@@ -217,6 +217,27 @@
             </div>
             <div id="resumen-tabla" class="tabla-wrap" style="border:none;border-radius:0"></div>
           </div>
+
+          <!-- Cierre de mes -->
+          <div style="margin-top:1.2rem;padding:1rem 1.2rem;background:#fdf6ee;border:1.5px solid #e5d9c0;border-radius:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+              <div>
+                <div style="font-weight:700;font-size:14px;color:#7D2D40">Cerrar mes</div>
+                <div style="font-size:12px;color:#9CA3AF;margin-top:2px">Genera el PDF, guarda el resumen en historial y limpia ventas y gastos del mes.</div>
+              </div>
+              <button class="btn-danger" id="btn-cerrar-mes" onclick="confirmarCierreMes()">
+                Cerrar mes
+              </button>
+            </div>
+          </div>
+
+          <!-- Historial de meses cerrados -->
+          <div class="panel" style="margin-top:1.2rem">
+            <div class="panel-header">
+              <span class="panel-title">Historial de meses cerrados</span>
+            </div>
+            <div id="historial-tabla" class="tabla-wrap" style="border:none;border-radius:0"></div>
+          </div>
         </section>
 
         <!-- NOVEDADES -->

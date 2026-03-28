@@ -1059,7 +1059,11 @@ function renderVentaItems() {
     lista.innerHTML = ventaItems.map((it, idx) => `
       <div class="venta-item-row">
         <span class="venta-item-nombre" title="${it.nombre}${it.variante ? ' — '+it.variante : ''}">${it.nombre}${it.variante ? ' — '+it.variante : ''}</span>
-        <span class="venta-item-precio">${formatPeso(it.precio)}</span>
+        <input type="number" class="venta-item-precio-input input-text"
+          value="${it.precio}"
+          style="width:90px;padding:3px 6px;font-size:13px;text-align:right"
+          oninput="editarPrecioItem(${idx}, this.value)"
+          placeholder="$" />
         <div class="venta-item-cant">
           <button onclick="cambiarCantItem(${idx},-1)">−</button>
           <span>${it.cantidad}</span>
@@ -1087,6 +1091,21 @@ function cambiarCantItem(idx, delta) {
 function quitarItem(idx) {
   ventaItems.splice(idx, 1);
   renderVentaItems();
+}
+
+function editarPrecioItem(idx, valor) {
+  if (!ventaItems[idx]) return;
+  ventaItems[idx].precio = Number(valor) || 0;
+  // Actualizar total sin re-renderizar (para no mover el foco del input)
+  const totalEl = document.getElementById('vta-total-live');
+  if (totalEl) {
+    const t = calcTotalVenta();
+    totalEl.querySelector('span:last-child').textContent = formatPeso(t);
+    const campTotal = document.getElementById('vta-total');
+    if (campTotal) campTotal.value = t;
+    const campEdit = document.getElementById('vta-total-edit');
+    if (campEdit) campEdit.value = t;
+  }
 }
 
 function agregarItemDesdeSelector() {
@@ -1353,6 +1372,15 @@ async function modalNuevaVenta(venta = null) {
       ${esNueva ? 'Registrar venta' : 'Guardar cambios'}
     </button>
   `);
+
+  // Renderizar items después de que el DOM del modal existe
+  renderVentaItems();
+
+  // Al editar: sincronizar vta-total-edit con el total calculado de los items
+  if (!esNueva && ventaItems.length > 0) {
+    const campEdit = document.getElementById('vta-total-edit');
+    if (campEdit) campEdit.value = calcTotalVenta() || venta?.total || '';
+  }
 }
 
 function guardarVentaDesdeModal() {
@@ -1396,8 +1424,12 @@ async function guardarVenta(idExistente = '', fechaExistente = '', horaExistente
       toast('Ingresá el total', 'error'); return;
     }
   } else {
-    // Edición — leer campo visible vta-total-edit
-    total = Number(document.getElementById('vta-total-edit')?.value || 0);
+    // Edición — si hay items, usar su total calculado; si no, leer campo manual
+    if (ventaItems.length > 0) {
+      total = calcTotalVenta();
+    } else {
+      total = Number(document.getElementById('vta-total-edit')?.value || 0);
+    }
     if (!total) { toast('Ingresá el total', 'error'); return; }
   }
 

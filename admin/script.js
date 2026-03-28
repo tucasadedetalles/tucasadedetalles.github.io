@@ -1416,7 +1416,7 @@ async function guardarVenta(idExistente = '', fechaExistente = '', horaExistente
 
     // Armar string de productos para el campo 'productos'
     const prodStr = ventaItems.length > 0
-      ? ventaItems.map(i => `${i.cantidad}x ${i.nombre}${i.variante?' ('+i.variante+')':''}`).join(', ')
+      ? ventaItems.map(i => `${i.cantidad}x ${i.nombre}${i.variante ? ' (' + i.variante + ')' : ''} @$${Number(i.precio || 0)}`).join(', ')
       : '';
 
     const notas = document.getElementById('vta-notas')?.value || '';
@@ -2072,20 +2072,34 @@ async function reciboWhatsApp(ventaId) {
 }
 
 function parsearItemsVenta(productos, notas, total) {
-  // Intenta parsear "2x Producto (variante), 1x Otro"
+  // Soporta formato nuevo: "2x Nombre (variante) @$1500"
+  // y formato viejo:       "2x Nombre (variante)"  (sin precio)
   const items = [];
   if (productos) {
     const partes = productos.split(',');
     partes.forEach(p => {
-      const m = p.trim().match(/^(\d+)x\s+(.+)$/);
-      if (m) {
-        items.push({ nombre: m[2].trim(), cantidad: parseInt(m[1]), precio: 0 });
+      // Formato nuevo con precio: "2x Nombre (variante) @$1500"
+      const mNuevo = p.trim().match(/^(\d+)x\s+(.+?)\s+@\$(\d+(?:\.\d+)?)$/);
+      if (mNuevo) {
+        items.push({ nombre: mNuevo[2].trim(), cantidad: parseInt(mNuevo[1]), precio: Number(mNuevo[3]) });
+        return;
+      }
+      // Formato viejo sin precio
+      const mViejo = p.trim().match(/^(\d+)x\s+(.+)$/);
+      if (mViejo) {
+        items.push({ nombre: mViejo[2].trim(), cantidad: parseInt(mViejo[1]), precio: 0 });
       }
     });
   }
-  // Si no se pudo parsear, usar notas como ítem genérico
+  // Si no se pudo parsear, usar notas como ítem genérico con el total
   if (items.length === 0 && (notas || total)) {
     items.push({ nombre: notas || 'Productos varios', cantidad: 1, precio: Number(total || 0) });
+  }
+  // Fallback para ventas viejas sin precio: repartir el total por unidad
+  const sinPrecio = items.filter(i => i.precio === 0);
+  if (sinPrecio.length > 0 && sinPrecio.length === items.length && Number(total) > 0) {
+    const cantTotal = items.reduce((s, i) => s + i.cantidad, 0);
+    items.forEach(i => { i.precio = Math.round(Number(total) / cantTotal); });
   }
   return items;
 }

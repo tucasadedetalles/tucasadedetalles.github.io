@@ -1547,3 +1547,18 @@ input, select, textarea { font-family: var(--font-main); }
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr; }
 }
+
+.btn-danger {
+  background: #C0392B;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 1.2rem;
+  font-size: 13.5px;
+  font-weight: 700;
+  transition: background var(--transition), transform var(--transition);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.btn-danger:hover  { background: #A93226; transform: translateY(-1px); }
+.btn-danger:active { transform: translateY(0); }

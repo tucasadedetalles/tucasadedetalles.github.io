@@ -1253,10 +1253,15 @@ async function modalNuevaVenta(venta = null) {
       `<option value="${inv.hojaId}">${inv.nombre}</option>`)
   ].join('');
 
+  // Pre-cargar ventaItems desde el string de la venta existente
+  if (!esNueva && venta?.productos) {
+    ventaItems = parsearItemsVenta(venta.productos, venta.notas || '', venta.total)
+      .map(i => ({ id: null, hoja: null, nombre: i.nombre, variante: '', precio: i.precio, cantidad: i.cantidad }));
+  }
+
   abrirModal(esNueva ? 'Registrar venta' : 'Editar venta', `
-    ${esNueva ? `
     <div class="field">
-      <label>Agregar productos</label>
+      <label>${esNueva ? 'Agregar productos' : 'Productos'}</label>
       <div class="venta-agregar-selector">
         <select id="vta-sel-cat" class="input-select" onchange="cargarCategoriasVenta()">
           ${optFuentes}
@@ -1292,7 +1297,6 @@ async function modalNuevaVenta(venta = null) {
         <span>${formatPeso(0)}</span>
       </div>
     </div>
-    ` : ''}
     <div class="field">
       <label>${esNueva ? 'Notas / descripción (opcional)' : 'Descripción'}</label>
       <input type="text" id="vta-notas" class="input-text"
@@ -1419,11 +1423,16 @@ async function guardarVenta(idExistente = '', fechaExistente = '', horaExistente
       ? ventaItems.map(i => `${i.cantidad}x ${i.nombre}${i.variante ? ' (' + i.variante + ')' : ''} @$${Number(i.precio || 0)}`).join(', ')
       : '';
 
+    // Al editar: si ventaItems quedó vacío (no se tocaron los items),
+    // conservar el string original de la venta para no pisarlo con ''
+    const ventaOriginal = !esNueva ? ventasCache.find(v => v.id === idExistente) : null;
+    const prodStrFinal  = prodStr || (ventaOriginal?.productos || '');
+
     const notas = document.getElementById('vta-notas')?.value || '';
 
     const fila = {
       id, fecha, hora,
-      productos:   prodStr,
+      productos:   prodStrFinal,
       total,
       medioPago:   document.getElementById('vta-pago').value,
       canal:       document.getElementById('vta-canal').value,

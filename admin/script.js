@@ -264,7 +264,7 @@ async function cargarSeccion(seccion) {
   if (seccion === 'caja')        await cargarCaja();
   if (seccion === 'novedades')   await cargarNovedades();
   if (seccion === 'fotos')       await cargarFotos();
-  if (seccion === 'resumen')     await cargarResumen();
+  if (seccion === 'resumen')     { await cargarResumen(); cargarHistorial(); }
   if (seccion === 'config')      await cargarConfig();
   if (seccion === 'calculadora') initCalculadora();
 }
@@ -1246,6 +1246,18 @@ function editarVenta(id) {
   if (v) modalNuevaVenta(v);
 }
 
+// Devuelve las notas limpias, sacando el prodStr si quedó guardado ahí
+function limpiarNotasVenta(notas, productos) {
+  if (!notas || !productos) return notas || '';
+  // Si notas es igual al prodStr (formato "2x Nombre @$xxx, ..."), devolver vacío
+  // Si notas contiene el prodStr como prefijo, devolver solo la parte extra
+  if (notas === productos) return '';
+  if (notas.startsWith(productos)) return notas.slice(productos.length).replace(/^[,\s]+/, '');
+  // Si notas luce como un prodStr (tiene patrón "Nx ... @$"), devolver vacío
+  if (/^\d+x\s+.+@\$\d/.test(notas.trim())) return '';
+  return notas;
+}
+
 async function modalNuevaVenta(venta = null) {
   const esNueva  = !venta;
 
@@ -1317,22 +1329,18 @@ async function modalNuevaVenta(venta = null) {
       </div>
     </div>
     <div class="field">
-      <label>${esNueva ? 'Notas / descripción (opcional)' : 'Descripción'}</label>
+      <label>Descripción / notas <span style="font-size:11px;color:var(--text-muted)">(opcional)</span></label>
       <input type="text" id="vta-notas" class="input-text"
-        placeholder="${esNueva ? 'Ej: envío, descuento aplicado...' : 'Descripción de la venta'}"
-        value="${venta?.notas || ''}" />
+        placeholder="Ej: envío incluido, descuento aplicado..."
+        value="${limpiarNotasVenta(venta?.notas || '', venta?.productos || '')}" />
     </div>
     <input type="hidden" id="vta-total" value="0" />
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
-      ${esNueva ? `<div class="field">
-        <label>Total $ <span style="font-size:11px;color:var(--text-muted)">(se calcula solo si agregás productos)</span></label>
-        <input type="number" id="vta-total-edit" class="input-text"
-          placeholder="0" oninput="document.getElementById('vta-total').value=this.value" />
-      </div>` : `<div class="field">
+      <div class="field">
         <label>Total $</label>
         <input type="number" id="vta-total-edit" class="input-text"
           placeholder="0" value="${venta?.total || ''}" />
-      </div>`}
+      </div>
       <div class="field">
         <label>Medio de pago</label>
         <select id="vta-pago" class="input-select">${optPagos}</select>
@@ -1407,22 +1415,17 @@ async function guardarVenta(idExistente = '', fechaExistente = '', horaExistente
 
   let total;
   if (esNueva) {
-    // Si hay items del selector, el total viene de ellos
+    // Total: desde ítems si los hay, sino del campo manual
     if (ventaItems.length > 0) {
       total = calcTotalVenta();
+      // Reflejar en el campo visible
+      const campEdit = document.getElementById('vta-total-edit');
+      if (campEdit) campEdit.value = total;
     } else {
-      // Venta manual — leer campo total visible
       total = Number(document.getElementById('vta-total-edit')?.value || 0);
     }
-    // Si no hay items Y no hay nota, pedir que complete algo
     const notas = document.getElementById('vta-notas')?.value?.trim() || '';
-    if (!total && !notas) {
-      toast('Agregá al menos un producto o una descripción', 'error'); return;
-    }
-    // Si hay nota pero no total, pedir total
-    if (!total && notas) {
-      toast('Ingresá el total', 'error'); return;
-    }
+    if (!total) { toast('Ingresá el total o agregá productos', 'error'); return; }
   } else {
     // Edición — si hay items, usar su total calculado; si no, leer campo manual
     if (ventaItems.length > 0) {
@@ -1468,7 +1471,7 @@ async function guardarVenta(idExistente = '', fechaExistente = '', horaExistente
       total,
       medioPago:   document.getElementById('vta-pago').value,
       canal:       document.getElementById('vta-canal').value,
-      notas:       notas || prodStr,
+      notas:       notas,
       comprobante: compUrl
     };
 
@@ -2473,3 +2476,125 @@ document.addEventListener('DOMContentLoaded', () => {
   if (token) mostrarApp();
   bindNav();
 });
+
+// ══════════════════════════════════════════════════════════════
+//  CIERRE DE MES
+// ══════════════════════════════════════════════════════════════
+
+function confirmarCierreMes() {
+  const mesLabel = getMesLabel();
+  const prefijo  = getMesPrefijo();
+
+  abrirModal('Cerrar mes — ' + mesLabel, `
+    <div style="text-align:center;padding:1rem 0">
+      <div style="font-size:36px;margin-bottom:12px">⚠️</div>
+      <p style="font-weight:700;font-size:15px;color:#7D2D40;margin:0 0 8px">
+        ¿Cerrar ${mesLabel}?
+      </p>
+      <p style="font-size:13px;color:var(--text-secondary);line-height:1.5;margin:0">
+        Se va a generar el PDF del resumen, guardarse en el historial<br>
+        y <strong>borrar todas las ventas y gastos de ${mesLabel}</strong>.<br>
+        Esta acción <strong>no se puede deshacer</strong>.
+      </p>
+    </div>
+  `, `
+    <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+    <button class="btn-danger" id="btn-confirmar-cierre" onclick="ejecutarCierreMes('${prefijo}','${mesLabel}')">
+      Sí, cerrar ${mesLabel}
+    </button>
+  `);
+}
+
+async function ejecutarCierreMes(mes, mesLabel) {
+  const btn = document.getElementById('btn-confirmar-cierre');
+  if (btn) { btn.textContent = 'Cerrando...'; btn.disabled = true; }
+
+  try {
+    const datos = window._resumenDatos;
+    if (!datos) { toast('Cargá el resumen primero', 'error'); return; }
+
+    // 1. Generar PDF
+    toast('Generando PDF del resumen...');
+    const resPdf = await apiPost({
+      action:      'generarResumenPDF',
+      mes,
+      mesLabel,
+      filas:       datos.filas,
+      totalVentas: datos.totalV,
+      totalGastos: datos.totalG,
+      saldo:       datos.saldo,
+      cantVentas:  datos.cantV
+    });
+
+    if (!resPdf.ok) { toast(resPdf.error || 'Error al generar el PDF', 'error'); return; }
+
+    // 2. Cerrar mes en GAS (historial + borrar ventas/gastos)
+    toast('Guardando historial y limpiando datos...');
+    const resCierre = await apiPost({
+      action:   'cerrarMes',
+      mes,
+      mesLabel,
+      pdfUrl:   resPdf.url,
+      totalV:   datos.totalV,
+      totalG:   datos.totalG,
+      saldo:    datos.saldo,
+      cantV:    datos.cantV,
+      cantG:    datos.filas ? datos.filas.reduce((s, f) => s + (f.gastos > 0 ? 1 : 0), 0) : 0
+    });
+
+    if (!resCierre.ok) { toast(resCierre.error || 'Error al cerrar el mes', 'error'); return; }
+
+    cerrarModal();
+    toast(`${mesLabel} cerrado correctamente ✓`);
+
+    // Recargar todo
+    await Promise.all([cargarVentas(), cargarGastos(), cargarResumen(), cargarHistorial()]);
+
+  } finally {
+    if (btn) { btn.textContent = `Sí, cerrar ${mesLabel}`; btn.disabled = false; }
+  }
+}
+
+async function cargarHistorial() {
+  const wrap = document.getElementById('historial-tabla');
+  if (!wrap) return;
+
+  try {
+    const res = await apiGet({ action: 'getAll', hoja: 'historial', token });
+    const data = (res.data || []).sort((a, b) => b.mes > a.mes ? 1 : -1);
+
+    if (data.length === 0) {
+      wrap.innerHTML = '<div class="list-empty" style="padding:1.5rem">Sin meses cerrados aún</div>';
+      return;
+    }
+
+    wrap.innerHTML = `
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>Mes</th>
+            <th>Ventas</th>
+            <th>Gastos</th>
+            <th>Saldo</th>
+            <th>PDF</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map(h => `
+            <tr>
+              <td data-label="Mes" style="font-weight:700">${h.mesLabel || h.mes}</td>
+              <td data-label="Ventas" style="color:var(--verde);font-weight:700">${formatPeso(h.totalVentas)}</td>
+              <td data-label="Gastos" style="color:var(--coral);font-weight:700">${formatPeso(h.totalGastos)}</td>
+              <td data-label="Saldo" style="font-weight:700;color:${Number(h.saldo)>=0?'var(--verde)':'var(--coral)'}">${formatPeso(h.saldo)}</td>
+              <td data-label="PDF">
+                ${h.pdfUrl
+                  ? `<a href="${h.pdfUrl}" target="_blank" style="color:var(--bordo);font-weight:700;font-size:12px">Ver PDF</a>`
+                  : '<span style="color:var(--text-muted);font-size:12px">—</span>'}
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch(e) {
+    wrap.innerHTML = '<div class="list-empty" style="padding:1.5rem">Error al cargar historial</div>';
+  }
+}

@@ -214,7 +214,7 @@ img { display: block; max-width: 100%; }
 
 .btn-admin-header {
   background: var(--bordo);
-  color: var(--crema) !important;
+  color: #FAF3E0 !important;
   border-radius: var(--radius-sm);
   padding: 0.45rem 1rem;
   font-size: 13px;

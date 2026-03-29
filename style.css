@@ -464,11 +464,21 @@ img { display: block; max-width: 100%; }
   margin-bottom: 0.6rem;
 }
 
+.theme-dark .sec-tag {
+  color: #E8829A;
+  background: rgba(232,130,154,0.15);
+  border-color: rgba(232,130,154,0.3);
+}
+
 .sec-title {
   font-family: var(--font-display);
   font-size: clamp(1.8rem, 4vw, 2.6rem);
   color: var(--text-dark);
   line-height: 1.15;
+}
+
+.theme-dark .sec-title {
+  color: #F0E6D3;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1320,6 +1330,14 @@ img { display: block; max-width: 100%; }
   font-size: 15px;
   margin: 0.8rem 0 1.6rem;
   line-height: 1.6;
+}
+
+.theme-dark .contacto-card .sec-title {
+  color: #FAF3E0 !important;
+}
+
+.theme-dark .contacto-sub {
+  color: rgba(250,243,224,0.85);
 }
 
 .contacto-btns {

@@ -112,13 +112,28 @@ img { display: block; max-width: 100%; }
   text-decoration: none;
 }
 
+.header-logo-img-wrap {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
 .header-logo-img {
   width: 36px;
   height: 36px;
   object-fit: contain;
   border-radius: 50%;
-  flex-shrink: 0;
+  position: absolute;
+  top: 0; left: 0;
+  transition: opacity 0.4s ease;
 }
+
+.logo-light { opacity: 1; }
+.logo-dark  { opacity: 0; }
+
+.theme-dark .logo-light { opacity: 0; }
+.theme-dark .logo-dark  { opacity: 1; }
 
 .header-logo-text {
   font-family: var(--font-display);

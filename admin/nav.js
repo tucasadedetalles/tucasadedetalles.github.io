@@ -32,7 +32,10 @@
     container.innerHTML = `
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-          <img src="../assets/logo.png" alt="Logo" class="sidebar-logo-img" />
+          <div class="sidebar-logo-img-wrap">
+            <img src="../assets/logo.png" alt="Logo" class="sidebar-logo-img logo-light" />
+            <img src="../assets/logo-dark.png" alt="Logo" class="sidebar-logo-img logo-dark" />
+          </div>
           <span class="sidebar-logo-text">Admin</span>
           <button class="sidebar-close" id="btn-sidebar-close">✕</button>
         </div>

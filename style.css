@@ -742,6 +742,10 @@ img { display: block; max-width: 100%; }
   color: var(--bordo);
 }
 
+.theme-dark .prod-card-precio {
+  color: #E8829A;
+}
+
 .btn-add-card {
   background: var(--bordo);
   color: var(--crema);
@@ -1464,7 +1468,7 @@ img { display: block; max-width: 100%; }
    RESPONSIVE
 ═══════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
-  .header { position: fixed; top: 0; left: 0; right: 0; }
+  .header { position: sticky; top: 0; }
   body { padding-top: 64px; }
   .header-nav { display: none; }
   .btn-admin-header { display: none; }

@@ -572,6 +572,9 @@ async function actualizarCodigoProd() {
   if (inp) inp.value = res.codigo || '';
 }
 
+// Almacena archivos de slots temporalmente mientras el modal está abierto
+const slotFiles = {};
+
 function previsualizarSlot(input) {
   const slot = input.dataset.slot;
   const file = input.files[0];
@@ -579,6 +582,9 @@ function previsualizarSlot(input) {
 
   const wrap = input.closest('.foto-slot');
   if (!wrap) return;
+
+  // Guardar referencia al archivo antes de reemplazar el DOM
+  slotFiles[slot] = file;
 
   // Reemplazar el label por preview con botón borrar (temporal hasta guardar)
   const url = URL.createObjectURL(file);
@@ -593,7 +599,7 @@ function previsualizarSlot(input) {
 function limpiarSlotNuevo(btn, slot) {
   const wrap = btn.closest('.foto-slot');
   if (!wrap) return;
-  const i = ['foto','foto2','foto3','foto4'].indexOf(slot);
+  delete slotFiles[slot]; // limpiar referencia
   wrap.querySelector('.foto-slot-preview').outerHTML = `
     <label class="foto-slot-empty">
       <input type="file" accept="image/*" data-slot="${slot}"
@@ -630,12 +636,15 @@ function previsualizarFotoProd(input) {
 }
 
 async function analizarFotoConGemini() {
-  // Busca la foto del slot principal
-  const slotInput = document.querySelector('.foto-slot input[data-slot="foto"]');
   const estado    = document.getElementById('gemini-foto-estado');
   const btn       = document.getElementById('btn-gemini-foto');
 
-  if (!slotInput?.files[0]) {
+  // Busca el archivo: primero en slotFiles (si el DOM fue reemplazado por preview),
+  // después en el input original si todavía existe
+  const file = slotFiles['foto']
+    || document.querySelector('.foto-slot input[data-slot="foto"]')?.files[0];
+
+  if (!file) {
     toast('Primero seleccioná la foto 1', 'error'); return;
   }
 
@@ -645,7 +654,7 @@ async function analizarFotoConGemini() {
   if (estado) estado.textContent = 'Gemini está analizando la imagen...';
 
   try {
-    const b64 = await comprimirImagen(slotInput.files[0]);
+    const b64 = await comprimirImagen(file);
     const res = await apiPost({ action: 'geminiAnalizarFoto', b64, categoria });
 
     if (res.ok) {
@@ -697,25 +706,13 @@ async function guardarProducto(idExistente, foto1Ant, foto2Ant, foto3Ant, foto4A
   try {
     const id  = idExistente || 'PRD-' + Date.now();
     const cat = document.getElementById('mp-cat').value;
-
-    // Subir fotos de los slots que tengan archivo nuevo
     const slots    = ['foto','foto2','foto3','foto4'];
     const anteriores = [foto1Ant, foto2Ant, foto3Ant, foto4Ant];
     const urls     = [...anteriores];
 
-    for (let i = 0; i < slots.length; i++) {
-      const input = document.querySelector(`.foto-slot input[data-slot="${slots[i]}"]`);
-      if (input?.files[0]) {
-        const b64  = await comprimirImagen(input.files[0]);
-        const resF = await apiPost({
-          action: 'subirFotoSlot', hoja: 'productos',
-          id, slot: slots[i], b64, nombre: id, categoria: cat
-        });
-        if (resF.ok) urls[i] = resF.url;
-      }
-    }
-
-    const fila = {
+    // Para producto NUEVO: guardar la fila primero (sin fotos) para que
+    // subirFotoSlot pueda encontrar la fila en Sheets via actualizarCampo
+    const filaBase = {
       id,
       codigo:      document.getElementById('mp-codigo').value,
       nombre,
@@ -728,14 +725,35 @@ async function guardarProducto(idExistente, foto1Ant, foto2Ant, foto3Ant, foto4A
       stockMinimo: document.getElementById('mp-stock-min').value,
       visible:     document.getElementById('mp-visible').checked ? 'true' : 'false',
       destacado:   document.getElementById('mp-destacado').checked ? 'true' : 'false',
-      foto:        urls[0] || '',
-      foto2:       urls[1] || '',
-      foto3:       urls[2] || '',
-      foto4:       urls[3] || '',
+      foto: '', foto2: '', foto3: '', foto4: '',
       creadoEn:    idExistente ? '' : fechaHoy()
     };
+    if (!idExistente) {
+      const resPre = await apiPost({ action: 'guardar', hoja: 'productos', fila: filaBase });
+      if (!resPre.ok) { toast(resPre.error || 'Error al guardar', 'error'); return; }
+    }
 
+    // Subir fotos usando slotFiles (persiste aunque el input haya sido reemplazado del DOM)
+    for (let i = 0; i < slots.length; i++) {
+      const file = slotFiles[slots[i]]
+        || document.querySelector(`.foto-slot input[data-slot="${slots[i]}"]`)?.files[0];
+      if (file) {
+        const b64  = await comprimirImagen(file);
+        const resF = await apiPost({
+          action: 'subirFotoSlot', hoja: 'productos',
+          id, slot: slots[i], b64, nombre: id, categoria: cat
+        });
+        if (resF.ok) urls[i] = resF.url;
+      }
+    }
+
+    // Guardar fila completa (con URLs de fotos)
+    const fila = { ...filaBase, foto: urls[0]||'', foto2: urls[1]||'', foto3: urls[2]||'', foto4: urls[3]||'' };
     const res = await apiPost({ action: 'guardar', hoja: 'productos', fila });
+
+    // Limpiar slotFiles al terminar
+    Object.keys(slotFiles).forEach(k => delete slotFiles[k]);
+
     if (res.ok) {
       cerrarModal();
       toast('Producto guardado');
@@ -1335,20 +1353,16 @@ async function modalNuevaVenta(venta = null) {
         value="${limpiarNotasVenta(venta?.notas || '', venta?.productos || '')}" />
     </div>
     <input type="hidden" id="vta-total" value="0" />
+    <input type="hidden" id="vta-total-edit" value="${venta?.total || '0'}" />
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
-      <div class="field">
-        <label>Total $</label>
-        <input type="number" id="vta-total-edit" class="input-text"
-          placeholder="0" value="${venta?.total || ''}" />
-      </div>
       <div class="field">
         <label>Medio de pago</label>
         <select id="vta-pago" class="input-select">${optPagos}</select>
       </div>
-    </div>
-    <div class="field">
-      <label>Canal</label>
-      <select id="vta-canal" class="input-select">${optCan}</select>
+      <div class="field">
+        <label>Canal</label>
+        <select id="vta-canal" class="input-select">${optCan}</select>
+      </div>
     </div>
     <div class="field">
       <label>Comprobante (imagen o PDF — opcional)</label>
@@ -2451,9 +2465,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('modal-close').addEventListener('click', cerrarModal);
-  document.getElementById('modal-overlay').addEventListener('click', e => {
-    if (e.target === document.getElementById('modal-overlay')) cerrarModal();
-  });
+  // Modal solo se cierra con el botón X, no al click afuera
+  // document.getElementById('modal-overlay').addEventListener('click', e => {
+  //   if (e.target === document.getElementById('modal-overlay')) cerrarModal();
+  // });
 
   document.getElementById('btn-menu').addEventListener('click', abrirSidebar);
 

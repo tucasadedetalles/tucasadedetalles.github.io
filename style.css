@@ -122,7 +122,7 @@ img { display: block; max-width: 100%; }
 }
 
 .theme-dark .header-logo-img {
-  filter: invert(1) brightness(1.8);
+  filter: brightness(0) invert(1);
 }
 
 .header-logo-text {

@@ -28,10 +28,10 @@
               <span id="theme-icon-pub">☾</span>
             </button>
             <button class="btn-carrito-header" id="btn-carrito-header" title="Ver carrito">
-              🛍
+              🛒
               <span class="carrito-count-badge" id="carrito-badge">0</span>
             </button>
-            <a href="admin/" class="btn-admin-header">Admin</a>
+            <a href="admin/" class="btn-admin-header" style="color:#FAF3E0">Admin</a>
             <button class="btn-menu-mobile" id="btn-menu-mobile">☰</button>
           </div>
         </div>

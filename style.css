@@ -1422,7 +1422,7 @@ img { display: block; max-width: 100%; }
    FOOTER
 ═══════════════════════════════════════════════════════════ */
 .footer {
-  background: var(--text-dark);
+  background: #1A1712;
   padding: 1rem 0;
 }
 

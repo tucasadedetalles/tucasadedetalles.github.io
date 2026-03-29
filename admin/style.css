@@ -58,13 +58,28 @@
 }
 
 /* ── Logo en sidebar y login ────────────────────────────── */
+.sidebar-logo-img-wrap {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
 .sidebar-logo-img {
   width: 32px;
   height: 32px;
   object-fit: contain;
   border-radius: 50%;
-  flex-shrink: 0;
+  position: absolute;
+  top: 0; left: 0;
+  transition: opacity 0.4s ease;
 }
+
+.logo-light { opacity: 1; }
+.logo-dark  { opacity: 0; }
+
+.theme-dark .logo-light { opacity: 0; }
+.theme-dark .logo-dark  { opacity: 1; }
 
 .login-logo-img {
   width: 52px;

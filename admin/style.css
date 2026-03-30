@@ -320,19 +320,22 @@
 
 .foto-card-img {
   width: 100%;
-  height: 140px;
+  aspect-ratio: 3 / 4;
   overflow: hidden;
   background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .foto-card-img img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   transition: transform 0.3s ease;
 }
 
-.foto-card:hover .foto-card-img img { transform: scale(1.05); }
+.foto-card:hover .foto-card-img img { transform: scale(1.03); }
 
 .foto-card-body { padding: 0.7rem 0.8rem; }
 

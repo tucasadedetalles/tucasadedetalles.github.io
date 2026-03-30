@@ -207,7 +207,7 @@
 
 .foto-slot {
   position: relative;
-  aspect-ratio: 1;
+  aspect-ratio: 3 / 4;
   border-radius: var(--radius-sm);
   overflow: hidden;
 }

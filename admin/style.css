@@ -267,8 +267,10 @@
 .foto-slot-preview img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
+  padding: 4px;
+  background: var(--bg-elevated);
 }
 
 .foto-slot-del {
